@@ -5,123 +5,123 @@ import io
 # Titel van de app
 st.title("🐂 Stieren Data Selectie")
 
-# Upload het hoofd Excel-bestand
-uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"], key="file1")
+# Upload een Excel-bestand
+uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"])
 
-# Upload het extra bestand met Kappa-caseïne en Beta-caseïne
-extra_file = st.file_uploader("📂 Upload extra stierinfo-bestand", type=["xlsx"], key="file2")
-
-# Functie om kolomnamen uniek te maken
-def maak_kolomnamen_uniek(kolomnamen):
-    seen = {}
-    nieuwe_kolomnamen = []
-    for col in kolomnamen:
-        if col in seen:
-            seen[col] += 1
-            nieuwe_kolomnamen.append(f"{col}_{seen[col]}")
-        else:
-            seen[col] = 0
-            nieuwe_kolomnamen.append(col)
-    return nieuwe_kolomnamen
-
-# Controleer of beide bestanden zijn geüpload
-if uploaded_file is not None and extra_file is not None:
+# Controleer of er een bestand is geüpload
+if uploaded_file is not None:
     try:
-        # Laad het hoofd Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
+        # Laad het Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
         df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)
-        
-        # Standaardiseer kolomnamen in het hoofdbestand
-        df.rename(columns={
-            "Levensnummer (ITB)": "Levensnummer",
-            "KI-code": "Kicode"
-        }, inplace=True)
-
-        # Laad het extra Excel-bestand met de juiste header-rij
-        df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)
-        df_extra.columns = df_extra.iloc[0].astype(str)  # Converteer kolomnamen naar string
-        df_extra = df_extra[1:].reset_index(drop=True)  # Verwijder de duplicaat-header rij
-        
-        # Verwijder ongewenste 'Unnamed' kolommen
-        df_extra = df_extra.loc[:, df_extra.columns.notna() & ~df_extra.columns.astype(str).str.contains('^Unnamed')]
-
-        # Controleer of de benodigde kolommen bestaan na hernoemen
-        st.write("✅ Kolommen in extra bestand na inlezen:")
-        st.write(df_extra.columns.tolist())
-
-        # Herbenoem relevante kolommen in het extra bestand
-        hernoem_dict = {
-            "Naam": "Stiernaam",
-            "Levensnummer": "Levensnummer",
-            "KI-code": "Kicode",
-            "Kappa-caseine": "Kappa-caseine",
-            "Betacasine": "Beta-caseine"
-        }
-        bestaande_kolommen = [col for col in hernoem_dict.keys() if col in df_extra.columns]
-        df_extra.rename(columns={k: hernoem_dict[k] for k in bestaande_kolommen}, inplace=True)
-
-        # Maak kolomnamen uniek vóór de merge
-        df.columns = maak_kolomnamen_uniek(df.columns)
-        df_extra.columns = maak_kolomnamen_uniek(df_extra.columns)
 
         # Laat een voorbeeld van de data zien
         st.write("📊 **Voorbeeld van de data:**")
         st.dataframe(df.head())
 
+        # **Stieren staan altijd in kolom C (index 2, want Python begint bij 0)**
+        stieren_kolom = df.columns[2]  # Kolom C vastzetten
+        ki_kolom = df.columns[1]  # Kolom B bevat de KI-code
+
         # Haal unieke stierennamen op
-        stieren_namen = df["Stiernaam"].dropna().unique()
+        stieren_namen = df[stieren_kolom].dropna().unique()
 
         # Multiselectie van stierennamen
         geselecteerde_stieren = st.multiselect("🐂 Selecteer de stieren", stieren_namen)
 
         if geselecteerde_stieren:
             # Filter de data op de geselecteerde stierennamen
-            gefilterde_data = df[df["Stiernaam"].isin(geselecteerde_stieren)]
-
-            # Merge-sleutels bepalen
-            merge_keys = ["Stiernaam", "Levensnummer", "Kicode", "Kappa-caseine", "Beta-caseine"]
-            merge_keys = [key for key in merge_keys if key in df_extra.columns]
-
-            # Merge de gegevens met extra bestand
-            gefilterde_data = gefilterde_data.merge(
-                df_extra[merge_keys],
-                on=[key for key in ["Stiernaam", "Levensnummer", "Kicode"] if key in df.columns and key in df_extra.columns],
-                how="left",
-                suffixes=("", "_extra")
-            )
+            gefilterde_data = df[df[stieren_kolom].isin(geselecteerde_stieren)]
 
             # **Stap 1: Keuze tussen Drag & Drop en Canada Template**
             optie = st.radio("📌 Kies een optie:", ["📂 Drag & Drop kolommen", "🇨🇦 Canada-template"])
 
             if optie == "📂 Drag & Drop kolommen":
                 st.write("📌 **Sleep de kolommen in de gewenste volgorde:**")
-                kolommen = list(gefilterde_data.columns)
+                kolommen = list(df.columns)
                 geselecteerde_kolommen = st.multiselect("📋 Kies kolommen", kolommen, default=kolommen)
+            
             else:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
                 canada_volgorde = {
+                    "Kicode": "KI Code",  # KI-code toegevoegd
                     "Stiernaam": "Bull name",
-                    "Kappa-caseine": "Kappa-caseine",
-                    "Beta-caseine": "Beta-caseine"
+                    "Vader": "Father",  # Vader toegevoegd
+                    "Moeders Vader": "Maternal Grandfather",  # Moeders Vader toegevoegd
+                    "aAa": "aAa", "% Betr": "% reliability", "Kg melk": "kg milk",
+                    "% vet": "% fat", "% eiwit": "% protein", "Kg vet": "kg fat",
+                    "Kg eiwit": "kg protein", "Dcht totaal": "#Daughters", "% Betr.1": "% reliability",
+                    "Frame": "frame", "Uier": "udder", "Beenwerk": "feet & legs",
+                    "Totaal exterieur": "final score", "Hoogtemaat": "stature", "Voorhand": "chest width",
+                    "Inhoud": "body depth", "Openheid": "angularity", "Conditie score": "condition score",
+                    "Kruisligging": "rump angle", "Kruisbreedte": "rump width", "Beenstand achter": "rear legs rear view",
+                    "Beenstand zij": "rear leg set", "Klauwhoek": "foot angle", "Voorbeenstand": "front feet orientation",
+                    "Beengebruik": "mobility", "Vooruieraanhechting": "fore udder attachment", 
+                    "Voorspeenplaatsing": "front teat placement", "Speenlengte": "teat length",
+                    "Uierdiepte": "udder depth", "Achteruierhoogte": "rear udder height", "Ophangband": "central ligament",
+                    "Achterspeenplaatsing": "rear teat placement", "Uierbalans": "udder balance",
+                    "Geboortegemak": "calving ease", "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
+                    "Vruchtbaarheid": "female fertility", "Karakter": "temperament", 
+                    "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
+                    "Klauwgezondheid": "hoof health"
                 }
 
-                geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in gefilterde_data.columns]
+                # Alleen kolommen gebruiken die in de dataset staan
+                geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
+
+                # **Stap 2: Uitklapbaar veld voor vertalingen**
+                vertalingen = {}
+                with st.expander("🌍 **Vertaling aanpassen**"):
+                    for col in geselecteerde_kolommen:
+                        vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
+
+                # **Stap 3: Controle op dubbele namen en oplossen**
+                def maak_unieke_namen(naam_lijst):
+                    unieke_namen = {}
+                    nieuwe_namen = []
+                    for naam in naam_lijst:
+                        if naam in unieke_namen:
+                            unieke_namen[naam] += 1
+                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
+                        else:
+                            unieke_namen[naam] = 0
+                            nieuwe_namen.append(naam)
+                    return nieuwe_namen
+
+                # Pas de vertalingen toe en maak namen uniek indien nodig
+                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
+                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
+
+                # Hernoem de kolommen in de dataset
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data = gefilterde_data.rename(columns=canada_volgorde)
+                gefilterde_data.columns = unieke_kolomnamen
 
-            # **Output als Excel (.xlsx)**
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                gefilterde_data.to_excel(writer, index=False, sheet_name="Data")
-            output.seek(0)
+            if geselecteerde_kolommen:
+                # **Sorteeropties op basis van kolomnamen**
+                sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", list(gefilterde_data.columns), index=0)
 
-            # **Download-knop voor de Excel-output**
-            st.download_button(
-                label="⬇️ Download Excel",
-                data=output,
-                file_name="gesorteerde_data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+                # **Sorteer de gefilterde data**
+                gesorteerde_data = gefilterde_data.sort_values(by=sorteer_keuze)
+
+                # **Laat de gesorteerde data zien**
+                st.write("✅ **Gesorteerde Data:**")
+                st.dataframe(gesorteerde_data)
+
+                # **Output als Excel (.xlsx)**
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
+                output.seek(0)
+
+                # **Download-knop voor de Excel-output**
+                st.download_button(
+                    label="⬇️ Download Excel",
+                    data=output,
+                    file_name="gesorteerde_data.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
     except Exception as e:
-        st.error(f"❌ Er is een fout opgetreden bij het verwerken van de bestanden: {e}")
+        st.error(f"❌ Er is een fout opgetreden bij het verwerken van het bestand: {e}")
+
 else:
-    st.warning("⚠️ Upload beide Excel-bestanden om te beginnen.")
+    st.warning("⚠️ Upload een Excel-bestand om te beginnen.")
