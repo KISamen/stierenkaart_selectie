@@ -42,6 +42,7 @@ if uploaded_file is not None:
             else:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
                 canada_volgorde = {
+                    "Stiernaam": "Bull name",
                     "aAa": "aAa", "% Betr": "% reliability", "Kg melk": "kg milk",
                     "% vet": "% fat", "% eiwit": "% protein", "Kg vet": "kg fat",
                     "Kg eiwit": "kg protein", "Dcht totaal": "#Daughters", "% Betr.1": "% reliability",
@@ -54,7 +55,8 @@ if uploaded_file is not None:
                     "Voorspeenplaatsing": "front teat placement", "Speenlengte": "teat length",
                     "Uierdiepte": "udder depth", "Achteruierhoogte": "rear udder height", "Ophangband": "central ligament",
                     "Achterspeenplaatsing": "rear teat placement", "Uierbalans": "udder balance",
-                    "Geboorte index": "calving ease", "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
+                    "  Geboortegemak": "calving ease",  # BR kolom
+                    "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
                     "Vruchtbaarheid": "female fertility", "Karakter": "temperament", 
                     "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
                     "Klauwgezondheid": "hoof health"
