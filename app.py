@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import io
 
 # Titel van de app
 st.title("🐂 Stieren Data Selectie")
@@ -34,7 +35,6 @@ if uploaded_file is not None:
             optie = st.radio("📌 Kies een optie:", ["📂 Drag & Drop kolommen", "🇨🇦 Canada-template"])
 
             if optie == "📂 Drag & Drop kolommen":
-                # **Gebruiker kiest de kolomvolgorde**
                 st.write("📌 **Sleep de kolommen in de gewenste volgorde:**")
                 kolommen = list(df.columns)
                 geselecteerde_kolommen = st.multiselect("📋 Kies kolommen", kolommen, default=kolommen)
@@ -92,6 +92,10 @@ if uploaded_file is not None:
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
                 gefilterde_data.columns = unieke_kolomnamen
 
+                # **Verwijder komma's uit de aAa-code**
+                if "aAa" in gefilterde_data.columns:
+                    gefilterde_data["aAa"] = gefilterde_data["aAa"].astype(str).str.replace(",", "").str.strip()
+
             if geselecteerde_kolommen:
                 # **Sorteeropties op basis van kolomnamen**
                 sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", list(gefilterde_data.columns), index=0)
@@ -103,9 +107,19 @@ if uploaded_file is not None:
                 st.write("✅ **Gesorteerde Data:**")
                 st.dataframe(gesorteerde_data)
 
-                # **Download-knop voor de gesorteerde data**
-                csv = gesorteerde_data.to_csv(index=False).encode('utf-8')
-                st.download_button(label="⬇️ Download CSV", data=csv, file_name="gesorteerde_data.csv", mime="text/csv")
+                # **Output als Excel (.xlsx)**
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                    gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
+                output.seek(0)
+
+                # **Download-knop voor de Excel-output**
+                st.download_button(
+                    label="⬇️ Download Excel",
+                    data=output,
+                    file_name="gesorteerde_data.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
 
     except Exception as e:
         st.error(f"❌ Er is een fout opgetreden bij het verwerken van het bestand: {e}")
