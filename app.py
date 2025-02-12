@@ -12,7 +12,7 @@ uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"])
 if uploaded_file is not None:
     try:
         # Laad het Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
-        df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)  # Rij 2 als header (index=1)
+        df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)
 
         # Laat een voorbeeld van de data zien
         st.write("📊 **Voorbeeld van de data:**")
@@ -57,8 +57,7 @@ if uploaded_file is not None:
                     "Voorspeenplaatsing": "front teat placement", "Speenlengte": "teat length",
                     "Uierdiepte": "udder depth", "Achteruierhoogte": "rear udder height", "Ophangband": "central ligament",
                     "Achterspeenplaatsing": "rear teat placement", "Uierbalans": "udder balance",
-                    "  Geboortegemak": "calving ease",  # BR kolom
-                    "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
+                    "Geboortegemak": "calving ease", "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
                     "Vruchtbaarheid": "female fertility", "Karakter": "temperament", 
                     "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
                     "Klauwgezondheid": "hoof health"
@@ -73,9 +72,26 @@ if uploaded_file is not None:
                     for col in geselecteerde_kolommen:
                         vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
-                # Pas de vertalingen toe
+                # **Stap 3: Controle op dubbele namen en oplossen**
+                def maak_unieke_namen(naam_lijst):
+                    unieke_namen = {}
+                    nieuwe_namen = []
+                    for naam in naam_lijst:
+                        if naam in unieke_namen:
+                            unieke_namen[naam] += 1
+                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
+                        else:
+                            unieke_namen[naam] = 0
+                            nieuwe_namen.append(naam)
+                    return nieuwe_namen
+
+                # Pas de vertalingen toe en maak namen uniek indien nodig
+                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
+                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
+
+                # Hernoem de kolommen in de dataset
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data = gefilterde_data.rename(columns=vertalingen)
+                gefilterde_data.columns = unieke_kolomnamen
 
             if geselecteerde_kolommen:
                 # **Sorteeropties op basis van kolomnamen**
@@ -88,7 +104,7 @@ if uploaded_file is not None:
                 st.write("✅ **Gesorteerde Data:**")
                 st.dataframe(gesorteerde_data)
 
-                # **Output als Excel (.xlsx) zonder xlsxwriter**
+                # **Output als Excel (.xlsx)**
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
                     gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
