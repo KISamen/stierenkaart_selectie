@@ -41,35 +41,52 @@ if uploaded_file is not None:
             
             else:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
-                canada_volgorde = [
-                    "aAa", "% Betr", "Kg melk", "% vet", "% eiwit", "Kg vet", "Kg eiwit",
-                    "Dcht totaal", "% Betr.1", "Frame", "Uier", "Beenwerk", "Totaal exterieur",
-                    "Hoogtemaat", "Voorhand", "Inhoud", "Openheid", "Conditie score", "Kruisligging",
-                    "Kruisbreedte", "Beenstand achter", "Beenstand zij", "Klauwhoek", "Voorbeenstand",
-                    "Beengebruik", "Vooruieraanhechting", "Voorspeenplaatsing", "Speenlengte", "Uierdiepte",
-                    "Achteruierhoogte", "Ophangband", "Achterspeenplaatsing", "Uierbalans", "Geboorte index",
-                    "Melksnelheid", "Celgetal", "Vruchtbaarheid", "Karakter", "Verwantschapsgraad",
-                    "Persistentie", "Klauwgezondheid"
-                ]
+                canada_volgorde = {
+                    "aAa": "aAa", "% Betr": "% reliability", "Kg melk": "kg milk",
+                    "% vet": "% fat", "% eiwit": "% protein", "Kg vet": "kg fat",
+                    "Kg eiwit": "kg protein", "Dcht totaal": "#Daughters", "% Betr.1": "% reliability",
+                    "Frame": "frame", "Uier": "udder", "Beenwerk": "feet & legs",
+                    "Totaal exterieur": "final score", "Hoogtemaat": "stature", "Voorhand": "chest width",
+                    "Inhoud": "body depth", "Openheid": "angularity", "Conditie score": "condition score",
+                    "Kruisligging": "rump angle", "Kruisbreedte": "rump width", "Beenstand achter": "rear legs rear view",
+                    "Beenstand zij": "rear leg set", "Klauwhoek": "foot angle", "Voorbeenstand": "front feet orientation",
+                    "Beengebruik": "mobility", "Vooruieraanhechting": "fore udder attachment", 
+                    "Voorspeenplaatsing": "front teat placement", "Speenlengte": "teat length",
+                    "Uierdiepte": "udder depth", "Achteruierhoogte": "rear udder height", "Ophangband": "central ligament",
+                    "Achterspeenplaatsing": "rear teat placement", "Uierbalans": "udder balance",
+                    "Geboorte index": "calving ease", "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
+                    "Vruchtbaarheid": "female fertility", "Karakter": "temperament", 
+                    "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
+                    "Klauwgezondheid": "hoof health"
+                }
+                
                 # Alleen kolommen gebruiken die in de dataset staan
-                geselecteerde_kolommen = [col for col in canada_volgorde if col in df.columns]
+                geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
+
+                # **Stap 2: Optie om vertalingen aan te passen**
+                st.write("🌍 **Pas vertalingen aan (optioneel):**")
+                vertalingen = {}
+                for col in geselecteerde_kolommen:
+                    vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
+
+                # **Stap 3: Toepassen van de vertalingen**
+                gefilterde_data = gefilterde_data[geselecteerde_kolommen]
+                gefilterde_data = gefilterde_data.rename(columns=vertalingen)
 
             if geselecteerde_kolommen:
-                gefilterde_data = gefilterde_data[geselecteerde_kolommen]  # Alleen gekozen kolommen tonen
+                # **Sorteeropties op basis van kolomnamen**
+                sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", list(gefilterde_data.columns), index=0)
 
-            # **Sorteeropties op basis van kolomnamen**
-            sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", geselecteerde_kolommen, index=0)
+                # **Sorteer de gefilterde data**
+                gesorteerde_data = gefilterde_data.sort_values(by=sorteer_keuze)
 
-            # **Sorteer de gefilterde data**
-            gesorteerde_data = gefilterde_data.sort_values(by=sorteer_keuze)
+                # **Laat de gesorteerde data zien**
+                st.write("✅ **Gesorteerde Data:**")
+                st.dataframe(gesorteerde_data)
 
-            # **Laat de gesorteerde data zien**
-            st.write("✅ **Gesorteerde Data:**")
-            st.dataframe(gesorteerde_data)
-
-            # **Download-knop voor de gesorteerde data**
-            csv = gesorteerde_data.to_csv(index=False).encode('utf-8')
-            st.download_button(label="⬇️ Download CSV", data=csv, file_name="gesorteerde_data.csv", mime="text/csv")
+                # **Download-knop voor de gesorteerde data**
+                csv = gesorteerde_data.to_csv(index=False).encode('utf-8')
+                st.download_button(label="⬇️ Download CSV", data=csv, file_name="gesorteerde_data.csv", mime="text/csv")
 
     except Exception as e:
         st.error(f"❌ Er is een fout opgetreden bij het verwerken van het bestand: {e}")
