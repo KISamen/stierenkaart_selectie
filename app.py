@@ -25,11 +25,11 @@ if uploaded_file is not None and extra_file is not None:
 
         # Laad het extra Excel-bestand met de juiste header-rij
         df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)
-        df_extra.columns = df_extra.iloc[0]  # Neem de eerste rij als header
+        df_extra.columns = df_extra.iloc[0].astype(str)  # Converteer kolomnamen naar string
         df_extra = df_extra[1:].reset_index(drop=True)  # Verwijder de duplicaat-header rij
         
-        # Verwijder ongewenste 'Unnamed' kolommen
-        df_extra = df_extra.loc[:, ~df_extra.columns.str.contains('^Unnamed')]
+        # Verwijder ongewenste 'Unnamed' kolommen (om fouten te voorkomen)
+        df_extra = df_extra.loc[:, df_extra.columns.notna() & ~df_extra.columns.astype(str).str.contains('^Unnamed')]
 
         # Controleer dubbele kolommen en voeg achtervoegsel toe
         duplicate_cols = [col for col in df_extra.columns if col in df.columns]
@@ -80,49 +80,6 @@ if uploaded_file is not None and extra_file is not None:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
                 canada_volgorde = {
                     "Stiernaam": "Bull name",
-                    "Vader": "Father",
-                    "Moeders Vader": "Maternal Grandfather",
-                    "aAa": "aAa",
-                    "% Betr": "% reliability",
-                    "Kg melk": "kg milk",
-                    "% vet": "% fat",
-                    "% eiwit": "% protein",
-                    "Kg vet": "kg fat",
-                    "Kg eiwit": "kg protein",
-                    "Dcht totaal": "#Daughters",
-                    "% Betr.1": "% reliability",
-                    "Frame": "frame",
-                    "Uier": "udder",
-                    "Beenwerk": "feet & legs",
-                    "Totaal exterieur": "final score",
-                    "Hoogtemaat": "stature",
-                    "Voorhand": "chest width",
-                    "Inhoud": "body depth",
-                    "Openheid": "angularity",
-                    "Conditie score": "condition score",
-                    "Kruisligging": "rump angle",
-                    "Kruisbreedte": "rump width",
-                    "Beenstand achter": "rear legs rear view",
-                    "Beenstand zij": "rear leg set",
-                    "Klauwhoek": "foot angle",
-                    "Voorbeenstand": "front feet orientation",
-                    "Beengebruik": "mobility",
-                    "Vooruieraanhechting": "fore udder attachment",
-                    "Voorspeenplaatsing": "front teat placement",
-                    "Speenlengte": "teat length",
-                    "Uierdiepte": "udder depth",
-                    "Achteruierhoogte": "rear udder height",
-                    "Ophangband": "central ligament",
-                    "Achterspeenplaatsing": "rear teat placement",
-                    "Uierbalans": "udder balance",
-                    "Geboortegemak": "calving ease",
-                    "Melksnelheid": "milking speed",
-                    "Celgetal": "somatic cell score",
-                    "Vruchtbaarheid": "female fertility",
-                    "Karakter": "temperament",
-                    "Verwantschapsgraad": "maturity rate",
-                    "Persistentie": "persistence",
-                    "Klauwgezondheid": "hoof health",
                     "Kappa-caseine": "Kappa-caseine",
                     "Beta-caseine": "Beta-caseine"
                 }
