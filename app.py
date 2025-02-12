@@ -16,15 +16,23 @@ if uploaded_file is not None and extra_file is not None:
     try:
         # Laad het hoofd Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
         df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)  # Rij 2 als header (index=1)
+        
+        # Standaardiseer kolomnamen in het hoofdbestand
+        df.rename(columns={
+            "Levensnummer (ITB)": "Levensnummer",
+            "KI-code": "Kicode"
+        }, inplace=True)
 
         # Laad het extra Excel-bestand met de juiste header-rij
-        df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)  # Rij 1 als header (index=0)
+        df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)  # Eerste rij bevat geen headers
+        df_extra.columns = df_extra.iloc[0]  # Neem de eerste rij als header
+        df_extra = df_extra[1:].reset_index(drop=True)  # Verwijder de duplicaat-header rij
 
         # Herbenoem relevante kolommen in het extra bestand
         df_extra.rename(columns={
             "Naam": "Stiernaam",  # Stiernaam aanpassen voor correcte matching
             "Levensnummer": "Levensnummer",
-            "Kicode": "Kicode",
+            "KI-code": "Kicode",
             "Kappa-caseine": "Kappa-caseine",
             "Betacasine": "Beta-caseine"
         }, inplace=True)
@@ -45,6 +53,7 @@ if uploaded_file is not None and extra_file is not None:
 
             # Merge-sleutels bepalen
             merge_keys = ["Stiernaam", "Levensnummer", "Kicode"]
+            merge_keys = [key for key in merge_keys if key in df.columns and key in df_extra.columns]
 
             # Merge de gegevens met extra bestand
             gefilterde_data = gefilterde_data.merge(
