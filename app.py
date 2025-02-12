@@ -20,6 +20,7 @@ if uploaded_file is not None:
 
         # **Stieren staan altijd in kolom C (index 2, want Python begint bij 0)**
         stieren_kolom = df.columns[2]  # Kolom C vastzetten
+        ki_kolom = df.columns[1]  # Kolom B bevat de KI-code
 
         # Haal unieke stierennamen op
         stieren_namen = df[stieren_kolom].dropna().unique()
@@ -42,6 +43,7 @@ if uploaded_file is not None:
             else:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
                 canada_volgorde = {
+                    "Kicode": "KI Code",  # KI-code toegevoegd
                     "Stiernaam": "Bull name",
                     "Vader": "Father",  # Vader toegevoegd
                     "Moeders Vader": "Maternal Grandfather",  # Moeders Vader toegevoegd
@@ -72,26 +74,9 @@ if uploaded_file is not None:
                     for col in geselecteerde_kolommen:
                         vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
-                # **Stap 3: Controle op dubbele namen en oplossen**
-                def maak_unieke_namen(naam_lijst):
-                    unieke_namen = {}
-                    nieuwe_namen = []
-                    for naam in naam_lijst:
-                        if naam in unieke_namen:
-                            unieke_namen[naam] += 1
-                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
-                        else:
-                            unieke_namen[naam] = 0
-                            nieuwe_namen.append(naam)
-                    return nieuwe_namen
-
-                # Pas de vertalingen toe en maak namen uniek indien nodig
-                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
-                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
-
-                # Hernoem de kolommen in de dataset
+                # Pas de vertalingen toe
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data.columns = unieke_kolomnamen
+                gefilterde_data = gefilterde_data.rename(columns=vertalingen)
 
             if geselecteerde_kolommen:
                 # **Sorteeropties op basis van kolomnamen**
