@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 
 # Titel van de app
-st.title("🐂 Stieren Data Selectie op Naam")
+st.title("🐂 Stieren Data Selectie")
 
 # Upload een Excel-bestand
 uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"])
@@ -30,10 +30,29 @@ if uploaded_file is not None:
             # Filter de data op de geselecteerde stierennamen
             gefilterde_data = df[df[stieren_kolom].isin(geselecteerde_stieren)]
 
-            # **Gebruiker kiest de kolomvolgorde**
-            st.write("📌 **Sleep de kolommen in de gewenste volgorde:**")
-            kolommen = list(df.columns)
-            geselecteerde_kolommen = st.multiselect("📋 Kies kolommen", kolommen, default=kolommen)
+            # **Stap 1: Keuze tussen Drag & Drop en Canada Template**
+            optie = st.radio("📌 Kies een optie:", ["📂 Drag & Drop kolommen", "🇨🇦 Canada-template"])
+
+            if optie == "📂 Drag & Drop kolommen":
+                # **Gebruiker kiest de kolomvolgorde**
+                st.write("📌 **Sleep de kolommen in de gewenste volgorde:**")
+                kolommen = list(df.columns)
+                geselecteerde_kolommen = st.multiselect("📋 Kies kolommen", kolommen, default=kolommen)
+            
+            else:
+                # **Canada-template volgorde instellen (met correcte kolomnamen)**
+                canada_volgorde = [
+                    "aAa", "% Betr", "Kg melk", "% vet", "% eiwit", "Kg vet", "Kg eiwit",
+                    "Dcht totaal", "% Betr.1", "Frame", "Uier", "Beenwerk", "Totaal exterieur",
+                    "Hoogtemaat", "Voorhand", "Inhoud", "Openheid", "Conditie score", "Kruisligging",
+                    "Kruisbreedte", "Beenstand achter", "Beenstand zij", "Klauwhoek", "Voorbeenstand",
+                    "Beengebruik", "Vooruieraanhechting", "Voorspeenplaatsing", "Speenlengte", "Uierdiepte",
+                    "Achteruierhoogte", "Ophangband", "Achterspeenplaatsing", "Uierbalans", "Geboorte index",
+                    "Melksnelheid", "Celgetal", "Vruchtbaarheid", "Karakter", "Verwantschapsgraad",
+                    "Persistentie", "Klauwgezondheid"
+                ]
+                # Alleen kolommen gebruiken die in de dataset staan
+                geselecteerde_kolommen = [col for col in canada_volgorde if col in df.columns]
 
             if geselecteerde_kolommen:
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]  # Alleen gekozen kolommen tonen
