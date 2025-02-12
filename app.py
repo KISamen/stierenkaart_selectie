@@ -59,7 +59,7 @@ if uploaded_file is not None:
                     "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
                     "Klauwgezondheid": "hoof health"
                 }
-                
+
                 # Alleen kolommen gebruiken die in de dataset staan
                 geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
@@ -69,9 +69,26 @@ if uploaded_file is not None:
                 for col in geselecteerde_kolommen:
                     vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
-                # **Stap 3: Toepassen van de vertalingen**
+                # **Stap 3: Controle op dubbele namen en oplossen**
+                def maak_unieke_namen(naam_lijst):
+                    unieke_namen = {}
+                    nieuwe_namen = []
+                    for naam in naam_lijst:
+                        if naam in unieke_namen:
+                            unieke_namen[naam] += 1
+                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
+                        else:
+                            unieke_namen[naam] = 0
+                            nieuwe_namen.append(naam)
+                    return nieuwe_namen
+
+                # Pas de vertalingen toe en maak namen uniek indien nodig
+                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
+                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
+
+                # Hernoem de kolommen in de dataset
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data = gefilterde_data.rename(columns=vertalingen)
+                gefilterde_data.columns = unieke_kolomnamen
 
             if geselecteerde_kolommen:
                 # **Sorteeropties op basis van kolomnamen**
