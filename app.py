@@ -24,13 +24,20 @@ if uploaded_file is not None and extra_file is not None:
         }, inplace=True)
 
         # Laad het extra Excel-bestand met de juiste header-rij
-        df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)  # Eerste rij bevat geen headers
+        df_extra = pd.read_excel(extra_file, engine="openpyxl", header=0)
         df_extra.columns = df_extra.iloc[0]  # Neem de eerste rij als header
         df_extra = df_extra[1:].reset_index(drop=True)  # Verwijder de duplicaat-header rij
+        
+        # Verwijder ongewenste 'Unnamed' kolommen
+        df_extra = df_extra.loc[:, ~df_extra.columns.str.contains('^Unnamed')]
+
+        # Controleer dubbele kolommen en voeg achtervoegsel toe
+        duplicate_cols = [col for col in df_extra.columns if col in df.columns]
+        df_extra.rename(columns={col: f"{col}_extra" for col in duplicate_cols}, inplace=True)
 
         # Herbenoem relevante kolommen in het extra bestand
         df_extra.rename(columns={
-            "Naam": "Stiernaam",  # Stiernaam aanpassen voor correcte matching
+            "Naam": "Stiernaam",
             "Levensnummer": "Levensnummer",
             "KI-code": "Kicode",
             "Kappa-caseine": "Kappa-caseine",
