@@ -44,18 +44,20 @@ if uploaded_file is not None and extra_file is not None:
         # Verwijder ongewenste 'Unnamed' kolommen
         df_extra = df_extra.loc[:, df_extra.columns.notna() & ~df_extra.columns.astype(str).str.contains('^Unnamed')]
 
-        # Controleer dubbele kolommen en voeg achtervoegsel toe
-        duplicate_cols = [col for col in df_extra.columns if col in df.columns]
-        df_extra.rename(columns={col: f"{col}_extra" for col in duplicate_cols}, inplace=True)
+        # Controleer of de benodigde kolommen bestaan na hernoemen
+        st.write("✅ Kolommen in extra bestand na inlezen:")
+        st.write(df_extra.columns.tolist())
 
         # Herbenoem relevante kolommen in het extra bestand
-        df_extra.rename(columns={
+        hernoem_dict = {
             "Naam": "Stiernaam",
             "Levensnummer": "Levensnummer",
             "KI-code": "Kicode",
             "Kappa-caseine": "Kappa-caseine",
             "Betacasine": "Beta-caseine"
-        }, inplace=True)
+        }
+        bestaande_kolommen = [col for col in hernoem_dict.keys() if col in df_extra.columns]
+        df_extra.rename(columns={k: hernoem_dict[k] for k in bestaande_kolommen}, inplace=True)
 
         # Maak kolomnamen uniek vóór de merge
         df.columns = maak_kolomnamen_uniek(df.columns)
@@ -76,13 +78,13 @@ if uploaded_file is not None and extra_file is not None:
             gefilterde_data = df[df["Stiernaam"].isin(geselecteerde_stieren)]
 
             # Merge-sleutels bepalen
-            merge_keys = ["Stiernaam", "Levensnummer", "Kicode"]
-            merge_keys = [key for key in merge_keys if key in df.columns and key in df_extra.columns]
+            merge_keys = ["Stiernaam", "Levensnummer", "Kicode", "Kappa-caseine", "Beta-caseine"]
+            merge_keys = [key for key in merge_keys if key in df_extra.columns]
 
             # Merge de gegevens met extra bestand
             gefilterde_data = gefilterde_data.merge(
-                df_extra[["Stiernaam", "Levensnummer", "Kicode", "Kappa-caseine", "Beta-caseine"]],
-                on=merge_keys,
+                df_extra[merge_keys],
+                on=[key for key in ["Stiernaam", "Levensnummer", "Kicode"] if key in df.columns and key in df_extra.columns],
                 how="left",
                 suffixes=("", "_extra")
             )
