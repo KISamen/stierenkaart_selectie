@@ -11,11 +11,24 @@ uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"], 
 # Upload het extra bestand met Kappa-caseïne en Beta-caseïne
 extra_file = st.file_uploader("📂 Upload extra stierinfo-bestand", type=["xlsx"], key="file2")
 
+# Functie om kolomnamen uniek te maken
+def maak_kolomnamen_uniek(kolomnamen):
+    seen = {}
+    nieuwe_kolomnamen = []
+    for col in kolomnamen:
+        if col in seen:
+            seen[col] += 1
+            nieuwe_kolomnamen.append(f"{col}_{seen[col]}")
+        else:
+            seen[col] = 0
+            nieuwe_kolomnamen.append(col)
+    return nieuwe_kolomnamen
+
 # Controleer of beide bestanden zijn geüpload
 if uploaded_file is not None and extra_file is not None:
     try:
         # Laad het hoofd Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
-        df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)  # Rij 2 als header (index=1)
+        df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)
         
         # Standaardiseer kolomnamen in het hoofdbestand
         df.rename(columns={
@@ -28,7 +41,7 @@ if uploaded_file is not None and extra_file is not None:
         df_extra.columns = df_extra.iloc[0].astype(str)  # Converteer kolomnamen naar string
         df_extra = df_extra[1:].reset_index(drop=True)  # Verwijder de duplicaat-header rij
         
-        # Verwijder ongewenste 'Unnamed' kolommen (om fouten te voorkomen)
+        # Verwijder ongewenste 'Unnamed' kolommen
         df_extra = df_extra.loc[:, df_extra.columns.notna() & ~df_extra.columns.astype(str).str.contains('^Unnamed')]
 
         # Controleer dubbele kolommen en voeg achtervoegsel toe
@@ -44,9 +57,9 @@ if uploaded_file is not None and extra_file is not None:
             "Betacasine": "Beta-caseine"
         }, inplace=True)
 
-        # Controleer of alle kolommen uniek zijn vóór de merge
-        df.columns = pd.io.parsers.ParserBase({'names': df.columns})._maybe_dedup_names()
-        df_extra.columns = pd.io.parsers.ParserBase({'names': df_extra.columns})._maybe_dedup_names()
+        # Maak kolomnamen uniek vóór de merge
+        df.columns = maak_kolomnamen_uniek(df.columns)
+        df_extra.columns = maak_kolomnamen_uniek(df_extra.columns)
 
         # Laat een voorbeeld van de data zien
         st.write("📊 **Voorbeeld van de data:**")
