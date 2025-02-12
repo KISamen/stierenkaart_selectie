@@ -43,6 +43,8 @@ if uploaded_file is not None:
                 # **Canada-template volgorde instellen (met correcte kolomnamen)**
                 canada_volgorde = {
                     "Stiernaam": "Bull name",
+                    "Vader": "Father",  # Vader toegevoegd
+                    "Moeders Vader": "Maternal Grandfather",  # Moeders Vader toegevoegd
                     "aAa": "aAa", "% Betr": "% reliability", "Kg melk": "kg milk",
                     "% vet": "% fat", "% eiwit": "% protein", "Kg vet": "kg fat",
                     "Kg eiwit": "kg protein", "Dcht totaal": "#Daughters", "% Betr.1": "% reliability",
@@ -71,30 +73,9 @@ if uploaded_file is not None:
                     for col in geselecteerde_kolommen:
                         vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
-                # **Stap 3: Controle op dubbele namen en oplossen**
-                def maak_unieke_namen(naam_lijst):
-                    unieke_namen = {}
-                    nieuwe_namen = []
-                    for naam in naam_lijst:
-                        if naam in unieke_namen:
-                            unieke_namen[naam] += 1
-                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
-                        else:
-                            unieke_namen[naam] = 0
-                            nieuwe_namen.append(naam)
-                    return nieuwe_namen
-
-                # Pas de vertalingen toe en maak namen uniek indien nodig
-                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
-                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
-
-                # Hernoem de kolommen in de dataset
+                # Pas de vertalingen toe
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data.columns = unieke_kolomnamen
-
-                # **Verwijder komma's uit de aAa-code**
-                if "aAa" in gefilterde_data.columns:
-                    gefilterde_data["aAa"] = gefilterde_data["aAa"].astype(str).str.replace(",", "").str.strip()
+                gefilterde_data = gefilterde_data.rename(columns=vertalingen)
 
             if geselecteerde_kolommen:
                 # **Sorteeropties op basis van kolomnamen**
@@ -107,9 +88,9 @@ if uploaded_file is not None:
                 st.write("✅ **Gesorteerde Data:**")
                 st.dataframe(gesorteerde_data)
 
-                # **Output als Excel (.xlsx)**
+                # **Output als Excel (.xlsx) zonder xlsxwriter**
                 output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
                     gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
                 output.seek(0)
 
