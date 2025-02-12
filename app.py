@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import io
+from openpyxl import Workbook
+from openpyxl.styles import Alignment
+from openpyxl.utils import get_column_letter
 
 # Titel van de app
 st.title("🐂 Stieren Data Selectie")
@@ -84,23 +87,10 @@ if uploaded_file is not None:
             # Alleen kolommen gebruiken die in de dataset staan
             geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
-            # **Stap 1: Voorkom dubbele kolomnamen**
-            def maak_unieke_namen(naam_lijst):
-                unieke_namen = {}
-                nieuwe_namen = []
-                for naam in naam_lijst:
-                    if naam in unieke_namen:
-                        unieke_namen[naam] += 1
-                        nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
-                    else:
-                        unieke_namen[naam] = 0
-                        nieuwe_namen.append(naam)
-                return nieuwe_namen
-
             # Categorieën toewijzen aan kolommen
             categorie_mapping = {
                 "Production Traits": ["kg milk", "% fat", "% protein", "kg fat", "kg protein", "#Daughters"],
-                "Conformation Traits": ["% reliability", "frame", "udder", "feet & legs", "final score"],
+                "Conformation Traits": ["frame", "udder", "feet & legs", "final score"],
                 "Lineair Traits": ["stature", "chest width", "body depth", "angularity", "condition score",
                                    "rump angle", "rump width", "rear legs rear view", "rear leg set", "foot angle",
                                    "front feet orientation", "mobility", "fore udder attachment",
@@ -110,7 +100,7 @@ if uploaded_file is not None:
                                       "temperament", "maturity rate", "persistence", "hoof health"]
             }
 
-            # Extra regel met categorieën toevoegen
+            # Extra regel met categorieën voorbereiden
             categorie_rij = []
             for col in geselecteerde_kolommen:
                 categorie = ""
@@ -120,19 +110,36 @@ if uploaded_file is not None:
                         break
                 categorie_rij.append(categorie)
 
-            # Dataframe maken met de extra regel
+            # Dataframe maken
             gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-            gefilterde_data.columns = maak_unieke_namen([canada_volgorde[col] for col in geselecteerde_kolommen])
+            gefilterde_data = gefilterde_data.rename(columns=canada_volgorde)
 
-            # Voeg de categorieën toe als extra rij
-            gefilterde_data.loc[-1] = categorie_rij
-            gefilterde_data.index = gefilterde_data.index + 1
-            gefilterde_data = gefilterde_data.sort_index()
-
-            # **Output als Excel (.xlsx)**
+            # **Output als Excel (.xlsx) met samengevoegde cellen**
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                gefilterde_data.to_excel(writer, index=False, sheet_name="Data")
+                gefilterde_data.to_excel(writer, index=False, sheet_name="Data", startrow=1)
+
+                workbook = writer.book
+                sheet = writer.sheets["Data"]
+
+                # Schrijf de categorieënrij boven de kolomnamen
+                for i, categorie in enumerate(categorie_rij):
+                    cell = sheet.cell(row=1, column=i + 1, value=categorie)
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+
+                # Samengevoegde cellen per categorie
+                col_indexes = {cat: [] for cat in categorie_mapping.keys()}
+                for i, categorie in enumerate(categorie_rij):
+                    if categorie:
+                        col_indexes[categorie].append(i + 1)
+
+                # Merge de cellen
+                for cat, cols in col_indexes.items():
+                    if cols:
+                        start_col = min(cols)
+                        end_col = max(cols)
+                        sheet.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
+
             output.seek(0)
 
             # **Download-knop voor de Excel-output**
