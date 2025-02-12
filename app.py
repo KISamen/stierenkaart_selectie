@@ -84,6 +84,19 @@ if uploaded_file is not None:
             # Alleen kolommen gebruiken die in de dataset staan
             geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
+            # **Stap 1: Voorkom dubbele kolomnamen**
+            def maak_unieke_namen(naam_lijst):
+                unieke_namen = {}
+                nieuwe_namen = []
+                for naam in naam_lijst:
+                    if naam in unieke_namen:
+                        unieke_namen[naam] += 1
+                        nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
+                    else:
+                        unieke_namen[naam] = 0
+                        nieuwe_namen.append(naam)
+                return nieuwe_namen
+
             # Categorieën toewijzen aan kolommen
             categorie_mapping = {
                 "Production Traits": ["kg milk", "% fat", "% protein", "kg fat", "kg protein", "#Daughters"],
@@ -109,10 +122,12 @@ if uploaded_file is not None:
 
             # Dataframe maken met de extra regel
             gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-            gefilterde_data = gefilterde_data.rename(columns=canada_volgorde)
-            gefilterde_data.loc[-1] = categorie_rij  # Voeg extra rij toe
-            gefilterde_data.index = gefilterde_data.index + 1  # Herindexeer
-            gefilterde_data = gefilterde_data.sort_index()  # Zorg ervoor dat de rij bovenaan staat
+            gefilterde_data.columns = maak_unieke_namen([canada_volgorde[col] for col in geselecteerde_kolommen])
+
+            # Voeg de categorieën toe als extra rij
+            gefilterde_data.loc[-1] = categorie_rij
+            gefilterde_data.index = gefilterde_data.index + 1
+            gefilterde_data = gefilterde_data.sort_index()
 
             # **Output als Excel (.xlsx)**
             output = io.BytesIO()
