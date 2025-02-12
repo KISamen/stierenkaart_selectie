@@ -44,6 +44,10 @@ if uploaded_file is not None and extra_file is not None:
             "Betacasine": "Beta-caseine"
         }, inplace=True)
 
+        # Controleer of alle kolommen uniek zijn vóór de merge
+        df.columns = pd.io.parsers.ParserBase({'names': df.columns})._maybe_dedup_names()
+        df_extra.columns = pd.io.parsers.ParserBase({'names': df_extra.columns})._maybe_dedup_names()
+
         # Laat een voorbeeld van de data zien
         st.write("📊 **Voorbeeld van de data:**")
         st.dataframe(df.head())
@@ -66,7 +70,8 @@ if uploaded_file is not None and extra_file is not None:
             gefilterde_data = gefilterde_data.merge(
                 df_extra[["Stiernaam", "Levensnummer", "Kicode", "Kappa-caseine", "Beta-caseine"]],
                 on=merge_keys,
-                how="left"
+                how="left",
+                suffixes=("", "_extra")
             )
 
             # **Stap 1: Keuze tussen Drag & Drop en Canada Template**
