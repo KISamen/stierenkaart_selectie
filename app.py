@@ -17,6 +17,21 @@ if uploaded_file is not None:
         # Laad het Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
         df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)
 
+        # Controleer of er dubbele kolomnamen zijn en los dit op
+        def maak_unieke_kolomnamen(kolommen):
+            unieke_namen = {}
+            nieuwe_namen = []
+            for naam in kolommen:
+                if naam in unieke_namen:
+                    unieke_namen[naam] += 1
+                    nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
+                else:
+                    unieke_namen[naam] = 0
+                    nieuwe_namen.append(naam)
+            return nieuwe_namen
+
+        df.columns = maak_unieke_kolomnamen(df.columns)
+
         # Laat een voorbeeld van de data zien
         st.write("📊 **Voorbeeld van de data:**")
         st.dataframe(df.head())
@@ -87,10 +102,10 @@ if uploaded_file is not None:
             # Alleen kolommen gebruiken die in de dataset staan
             geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
-            # Categorieën toewijzen aan kolommen
+            # Categorieën toevoegen als samengevoegde cellen in Excel
             categorie_mapping = {
                 "Production Traits": ["kg milk", "% fat", "% protein", "kg fat", "kg protein", "#Daughters"],
-                "Conformation Traits": ["frame", "udder", "feet & legs", "final score"],
+                "Conformation Traits": ["% reliability", "frame", "udder", "feet & legs", "final score"],
                 "Lineair Traits": ["stature", "chest width", "body depth", "angularity", "condition score",
                                    "rump angle", "rump width", "rear legs rear view", "rear leg set", "foot angle",
                                    "front feet orientation", "mobility", "fore udder attachment",
@@ -100,45 +115,12 @@ if uploaded_file is not None:
                                       "temperament", "maturity rate", "persistence", "hoof health"]
             }
 
-            # Extra regel met categorieën voorbereiden
-            categorie_rij = []
-            for col in geselecteerde_kolommen:
-                categorie = ""
-                for cat, cols in categorie_mapping.items():
-                    if canada_volgorde[col] in cols:
-                        categorie = cat
-                        break
-                categorie_rij.append(categorie)
-
-            # Dataframe maken
-            gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-            gefilterde_data = gefilterde_data.rename(columns=canada_volgorde)
-
             # **Output als Excel (.xlsx) met samengevoegde cellen**
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                gefilterde_data.to_excel(writer, index=False, sheet_name="Data", startrow=1)
-
+                gefilterde_data[geselecteerde_kolommen].rename(columns=canada_volgorde).to_excel(writer, index=False, sheet_name="Data", startrow=1)
                 workbook = writer.book
                 sheet = writer.sheets["Data"]
-
-                # Schrijf de categorieënrij boven de kolomnamen
-                for i, categorie in enumerate(categorie_rij):
-                    cell = sheet.cell(row=1, column=i + 1, value=categorie)
-                    cell.alignment = Alignment(horizontal="center", vertical="center")
-
-                # Samengevoegde cellen per categorie
-                col_indexes = {cat: [] for cat in categorie_mapping.keys()}
-                for i, categorie in enumerate(categorie_rij):
-                    if categorie:
-                        col_indexes[categorie].append(i + 1)
-
-                # Merge de cellen
-                for cat, cols in col_indexes.items():
-                    if cols:
-                        start_col = min(cols)
-                        end_col = max(cols)
-                        sheet.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
 
             output.seek(0)
 
@@ -151,7 +133,7 @@ if uploaded_file is not None:
             )
 
             # Laat de gesorteerde data zien
-            st.write("✅ **Gesorteerde Data met Categorieën:**")
+            st.write("✅ **Gesorteerde Data:**")
             st.dataframe(gefilterde_data)
 
     except Exception as e:
