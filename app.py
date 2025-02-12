@@ -65,11 +65,11 @@ if uploaded_file is not None:
                 # Alleen kolommen gebruiken die in de dataset staan
                 geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
-                # **Stap 2: Optie om vertalingen aan te passen**
-                st.write("🌍 **Pas vertalingen aan (optioneel):**")
+                # **Stap 2: Uitklapbaar veld voor vertalingen**
                 vertalingen = {}
-                for col in geselecteerde_kolommen:
-                    vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
+                with st.expander("🌍 **Vertaling aanpassen**"):
+                    for col in geselecteerde_kolommen:
+                        vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
                 # **Stap 3: Controle op dubbele namen en oplossen**
                 def maak_unieke_namen(naam_lijst):
