@@ -65,6 +65,10 @@ if uploaded_file is not None:
                     "Klauwgezondheid": "hoof health"
                 }
 
+                # Voeg kolom BR (Geboortegemak) toe als deze bestaat
+                if "BR" in df.columns:
+                    canada_volgorde["BR"] = "calving ease"
+                
                 # Alleen kolommen gebruiken die in de dataset staan
                 geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
 
@@ -74,42 +78,19 @@ if uploaded_file is not None:
                     for col in geselecteerde_kolommen:
                         vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
 
-                # **Stap 3: Controle op dubbele namen en oplossen**
-                def maak_unieke_namen(naam_lijst):
-                    unieke_namen = {}
-                    nieuwe_namen = []
-                    for naam in naam_lijst:
-                        if naam in unieke_namen:
-                            unieke_namen[naam] += 1
-                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
-                        else:
-                            unieke_namen[naam] = 0
-                            nieuwe_namen.append(naam)
-                    return nieuwe_namen
-
-                # Pas de vertalingen toe en maak namen uniek indien nodig
-                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
-                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
-
-                # Hernoem de kolommen in de dataset
+                # Pas de vertalingen toe
                 gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data.columns = unieke_kolomnamen
+                gefilterde_data.columns = [vertalingen[col] for col in geselecteerde_kolommen]
 
             if geselecteerde_kolommen:
-                # **Sorteeropties op basis van kolomnamen**
-                sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", list(gefilterde_data.columns), index=0)
-
-                # **Sorteer de gefilterde data**
-                gesorteerde_data = gefilterde_data.sort_values(by=sorteer_keuze)
-
                 # **Laat de gesorteerde data zien**
                 st.write("✅ **Gesorteerde Data:**")
-                st.dataframe(gesorteerde_data)
+                st.dataframe(gefilerde_data)
 
                 # **Output als Excel (.xlsx)**
                 output = io.BytesIO()
                 with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
+                    gefilterde_data.to_excel(writer, index=False, sheet_name="Data")
                 output.seek(0)
 
                 # **Download-knop voor de Excel-output**
@@ -122,7 +103,5 @@ if uploaded_file is not None:
 
     except Exception as e:
         st.error(f"❌ Er is een fout opgetreden bij het verwerken van het bestand: {e}")
-
 else:
     st.warning("⚠️ Upload een Excel-bestand om te beginnen.")
-
