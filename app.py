@@ -125,3 +125,4 @@ if uploaded_file is not None:
 
 else:
     st.warning("⚠️ Upload een Excel-bestand om te beginnen.")
+
