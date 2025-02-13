@@ -15,9 +15,22 @@ if uploaded_tip_file is not None and uploaded_stierinfo_file is not None:
         tip_df = pd.read_excel(uploaded_tip_file, engine="openpyxl", header=1)
         stierinfo_df = pd.read_excel(uploaded_stierinfo_file, engine="openpyxl")
 
-        # Zorg ervoor dat kolomnamen uniek zijn
-        tip_df.columns = pd.io.parsers.ParserBase({'names': tip_df.columns})._maybe_dedup_names()
-        stierinfo_df.columns = pd.io.parsers.ParserBase({'names': stierinfo_df.columns})._maybe_dedup_names()
+        # Zorg ervoor dat kolomnamen uniek zijn door dubbele kolommen te hernoemen
+        def maak_unieke_kolomnamen(columns):
+            unieke_kolommen = []
+            kolom_teller = {}
+            for kolom in columns:
+                nieuwe_naam = kolom
+                if nieuwe_naam in kolom_teller:
+                    kolom_teller[nieuwe_naam] += 1
+                    nieuwe_naam = f"{kolom}_{kolom_teller[nieuwe_naam]}"
+                else:
+                    kolom_teller[nieuwe_naam] = 0
+                unieke_kolommen.append(nieuwe_naam)
+            return unieke_kolommen
+
+        tip_df.columns = maak_unieke_kolomnamen(tip_df.columns)
+        stierinfo_df.columns = maak_unieke_kolomnamen(stierinfo_df.columns)
 
         # Relevante kolommen uit TIP-bestand selecteren
         tip_df = tip_df.rename(columns={
@@ -55,49 +68,6 @@ if uploaded_tip_file is not None and uploaded_stierinfo_file is not None:
             canada_volgorde = {
                 "KI Code": "KI Code",
                 "Stiernaam": "Bull name",
-                "Vader": "Father",
-                "Moeders Vader": "Maternal Grandfather",
-                "aAa": "aAa",
-                "% Betr": "% reliability",
-                "Kg melk": "kg milk",
-                "% vet": "% fat",
-                "% eiwit": "% protein",
-                "Kg vet": "kg fat",
-                "Kg eiwit": "kg protein",
-                "Dcht totaal": "#Daughters",
-                "% Betr.1": "% reliability",
-                "Frame": "frame",
-                "Uier": "udder",
-                "Beenwerk": "feet & legs",
-                "Totaal exterieur": "final score",
-                "Hoogtemaat": "stature",
-                "Voorhand": "chest width",
-                "Inhoud": "body depth",
-                "Openheid": "angularity",
-                "Conditie score": "condition score",
-                "Kruisligging": "rump angle",
-                "Kruisbreedte": "rump width",
-                "Beenstand achter": "rear legs rear view",
-                "Beenstand zij": "rear leg set",
-                "Klauwhoek": "foot angle",
-                "Voorbeenstand": "front feet orientation",
-                "Beengebruik": "mobility",
-                "Vooruieraanhechting": "fore udder attachment",
-                "Voorspeenplaatsing": "front teat placement",
-                "Speenlengte": "teat length",
-                "Uierdiepte": "udder depth",
-                "Achteruierhoogte": "rear udder height",
-                "Ophangband": "central ligament",
-                "Achterspeenplaatsing": "rear teat placement",
-                "Uierbalans": "udder balance",
-                "Geboortegemak": "calving ease",
-                "Melksnelheid": "milking speed",
-                "Celgetal": "somatic cell score",
-                "Vruchtbaarheid": "female fertility",
-                "Karakter": "temperament",
-                "Verwantschapsgraad": "maturity rate",
-                "Persistentie": "persistence",
-                "Klauwgezondheid": "hoof health",
                 "Kappa Caseïne": "Kappa Casein",
                 "Beta Caseïne": "Beta Casein"
             }
