@@ -28,6 +28,10 @@ if uploaded_tip_file is not None and uploaded_stierinfo_file is not None:
             "Betacasine": "Beta Caseïne"
         })
 
+        # Zorg ervoor dat de merge kolommen dezelfde datatype hebben
+        tip_df["KI Code"] = tip_df["KI Code"].astype(str)
+        stierinfo_df["Stier ID"] = stierinfo_df["Stier ID"].astype(str)
+        
         # Merge de data op basis van stiernaam of KI-code
         merged_df = tip_df.merge(stierinfo_df, left_on="KI Code", right_on="Stier ID", how="left")
         
