@@ -15,9 +15,9 @@ if uploaded_tip_file is not None and uploaded_stierinfo_file is not None:
         tip_df = pd.read_excel(uploaded_tip_file, engine="openpyxl", header=1)
         stierinfo_df = pd.read_excel(uploaded_stierinfo_file, engine="openpyxl")
 
-        # Hernoem dubbele kolommen
-        tip_df = tip_df.loc[:, ~tip_df.columns.duplicated()]
-        stierinfo_df = stierinfo_df.loc[:, ~stierinfo_df.columns.duplicated()]
+        # Zorg ervoor dat kolomnamen uniek zijn
+        tip_df.columns = pd.io.parsers.ParserBase({'names': tip_df.columns})._maybe_dedup_names()
+        stierinfo_df.columns = pd.io.parsers.ParserBase({'names': stierinfo_df.columns})._maybe_dedup_names()
 
         # Relevante kolommen uit TIP-bestand selecteren
         tip_df = tip_df.rename(columns={
