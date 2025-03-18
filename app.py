@@ -22,7 +22,7 @@ if st.button("Genereer Stierenkaart"):
         df_pim = pd.read_excel(uploaded_pim)
         df_prijs = pd.read_excel(uploaded_prijs)
         
-        # Strip eventuele witruimtes in alle kolomnamen
+        # Strip witruimtes in alle kolomnamen
         for df in [df_crv, df_joop, df_pim, df_prijs]:
             df.columns = df.columns.str.strip()
         
@@ -41,7 +41,7 @@ if st.button("Genereer Stierenkaart"):
             st.stop()
         if found_key != standard_key:
             df_crv.rename(columns={found_key: standard_key}, inplace=True)
-        # Converteer merge key naar string, verwijder witruimtes en zet om naar hoofdletters
+        # Converteer merge key in CRV naar string, verwijder witruimtes en zet om naar hoofdletters
         df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip().str.upper()
         
         st.write(f"Gebruik merge key: **{standard_key}**")
@@ -59,7 +59,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
-        # Pim K.I. Samen-bestand: de merge key moet exact aanwezig zijn als "Stiercode NL / KI code"
+        # Pim K.I. Samen-bestand: verwacht exact de kolom "Stiercode NL / KI code"
         if "Stiercode NL / KI code" not in df_pim.columns:
             st.error("In het Pim K.I. Samen-bestand ontbreekt de kolom 'Stiercode NL / KI code'.")
             st.stop()
@@ -67,7 +67,7 @@ if st.button("Genereer Stierenkaart"):
             df_pim.rename(columns={"Stiercode NL / KI code": standard_key}, inplace=True)
             df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
         
-        # Prijslijst-bestand: de merge key moet exact aanwezig zijn als "Artikelnr."
+        # Prijslijst-bestand: verwacht exact de kolom "Artikelnr."
         if "Artikelnr." not in df_prijs.columns:
             st.error("In het Prijslijst-bestand ontbreekt de kolom 'Artikelnr.'.")
             st.stop()
@@ -79,26 +79,26 @@ if st.button("Genereer Stierenkaart"):
         match_count = len(set(df_crv[standard_key]) & set(df_pim[standard_key]))
         st.write("Aantal overeenkomende sleutels tussen CRV en Pim:", match_count)
         
-        # Verwijder (leeg) kolommen in het CRV-bestand zodat de data uit Pim niet overschreven wordt
+        # Verwijder de kolommen uit CRV zodat de data uit Pim niet overschreven wordt
         cols_override = ["PFW", "aAa", "beta caseïne", "kappa Caseïne"]
         df_crv.drop(columns=cols_override, errors='ignore', inplace=True)
         
-        # Voeg de data samen op basis van de merge key (start met CRV als basis)
-        df_merged = df_crv.copy()
+        # Wijzig de merge-volgorde: eerst CRV met Pim, daarna met Joop, daarna met Prijslijst
+        df_merged = pd.merge(df_crv, df_pim, on=standard_key, how='left')
+        
         if standard_key in df_joop.columns:
-            df_merged = pd.merge(df_merged, df_joop, on=standard_key, how='left')
+            # Voeg data uit Joop toe, met suffix indien nodig
+            df_merged = pd.merge(df_merged, df_joop, on=standard_key, how='left', suffixes=("", "_joop"))
         else:
             st.warning("Merge key niet gevonden in het Joop Olieman-bestand.")
-        if standard_key in df_pim.columns:
-            df_merged = pd.merge(df_merged, df_pim, on=standard_key, how='left')
-        else:
-            st.warning("Merge key niet gevonden in het Pim K.I. Samen-bestand.")
+        
         if standard_key in df_prijs.columns:
-            df_merged = pd.merge(df_merged, df_prijs, on=standard_key, how='left')
+            # Voeg data uit Prijslijst toe, met suffix indien nodig
+            df_merged = pd.merge(df_merged, df_prijs, on=standard_key, how='left', suffixes=("", "_prijs"))
         else:
             st.warning("Merge key niet gevonden in het Prijslijst-bestand.")
         
-        # Definitie van de gewenste kolomvolgorde en titels (volgens voorbeeld in het tabblad 'fokstieren')
+        # Definitie van de gewenste kolomvolgorde en titels (volgens voorbeeld in tabblad 'fokstieren')
         kolom_mapping = [
             ("KI-code", "KI-code"),
             ("Stier", "Stiernaam"),
