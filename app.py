@@ -12,7 +12,9 @@ Upload de volgende bestanden:
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 
 Na verwerking kun je via een multiselect aangeven welke stieren in de hoofd-export moeten komen.
-Daarnaast kun je in bulk een Excel-bestand uploaden met stiercode en naam (bijv. kolom "Stiernaam" of "Naam"), zodat deze selectie als standaard wordt ingevuld.
+Daarnaast kun je een bulk-selectiebestand uploaden met stiergegevens.
+Dit bestand kan een kolom "Stiernaam" of "Naam" bevatten.  
+Als dat niet aanwezig is maar wel een kolom "Stiercode", dan wordt die gebruikt om de bijbehorende stiernamen (uit de kolom "Stier" in de output) op te zoeken.
 De overige stieren komen in een apart tabblad.
 """)
 
@@ -51,7 +53,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.write("Kolommen in PIM bestand:", df_pim.columns.tolist())
             
-            # Normaliseer de KI-code in elk bestand
+            # Normaliseer de KI-code in elk bestand (omzetten naar hoofdletters en trimmen)
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
@@ -78,12 +80,12 @@ if st.button("Genereer Stierenkaart"):
             
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Definieer de mappingtabel
+            # Definieer de mappingtabel (gebruik de exacte titels zoals in de bestanden)
             mapping_table = [
                 {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
-                # We verwachten dat de CRV mogelijk "Stiernaam" of "Stier" bevat.
+                # Gebruik "Stiernaam" als eerste keuze, met fallback op "Stier"
                 {"Titel in bestand": "Stiernaam",        "Stierenkaart": "Stier",               "Waar te vinden": ""},
                 {"Titel in bestand": "Erf-fact",         "Stierenkaart": "Erf-fact",            "Waar te vinden": ""},
                 {"Titel in bestand": "Vader",            "Stierenkaart": "Afstamming V",        "Waar te vinden": "Bronbestand CRV"},
@@ -145,7 +147,7 @@ if st.button("Genereer Stierenkaart"):
                 std_naam = mapping["Stierenkaart"]
                 bron = mapping["Waar te vinden"]
                 
-                # Fallback voor stiernaam: als "Stiernaam" niet aanwezig is, probeer "Stier"
+                # Fallback voor stiernaam: als "Stiernaam" niet in df_merged staat maar "Stier" wel, gebruik dan "Stier"
                 if std_naam == "Stier" and titel not in df_merged.columns and "Stier" in df_merged.columns:
                     final_data[std_naam] = df_merged["Stier"]
                     continue
@@ -186,29 +188,35 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_mapping = st.session_state.df_mapping
 
-    # Bepaal de beschikbare opties voor de multiselect op basis van de kolom "Stier"
+    # Bepaal de beschikbare stiernamen uit de kolom "Stier"
     if "Stier" in df_stierenkaart.columns:
         options = sorted(df_stierenkaart["Stier"].dropna().unique().tolist())
     else:
         options = []
     st.write("Beschikbare stieren:", options)
     
-    # Extra uploadoptie voor bulk-selectiebestand (met stiercode en naam)
-    bulk_file = st.file_uploader("Upload bulk selectie bestand met Stiercode en Naam", type=["xlsx"], key="bulk")
+    # Extra uploadoptie voor bulk-selectiebestand (met stiercode en/of stiernaam)
+    bulk_file = st.file_uploader("Upload bulk selectie bestand met Stiercode en/of Stiernaam", type=["xlsx"], key="bulk")
     bulk_selected = []
     if bulk_file is not None:
         try:
             df_bulk = pd.read_excel(bulk_file)
-            # Probeer eerst de kolom 'Stiernaam', anders 'Naam'
+            # Eerst proberen we de kolom 'Stiernaam'
             if "Stiernaam" in df_bulk.columns:
                 bulk_selected = sorted(df_bulk["Stiernaam"].dropna().unique().tolist())
+            # Anders kijken we of er een kolom 'Naam' is
             elif "Naam" in df_bulk.columns:
                 bulk_selected = sorted(df_bulk["Naam"].dropna().unique().tolist())
+            # Als er geen van beide aanwezig is, maar wel 'Stiercode', gebruiken we die om de stiernamen te bepalen
+            elif "Stiercode" in df_bulk.columns:
+                bulk_codes = sorted(df_bulk["Stiercode"].dropna().unique().tolist())
+                # We gaan ervan uit dat de bull code in de output in de kolom "KI-code" staat
+                bulk_selected = sorted(df_stierenkaart.loc[df_stierenkaart["KI-code"].isin(bulk_codes), "Stier"].unique().tolist())
             st.write("Bulk selectie:", bulk_selected)
         except Exception as e:
             st.error("Fout bij het laden van het bulk selectie bestand: " + str(e))
     
-    # Multiselect-widget met standaard bulk selectie (als aanwezig)
+    # Multiselect-widget met standaard bulk selectie als default (indien aanwezig)
     selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options, default=bulk_selected)
     st.write("Geselecteerde stieren:", selected_stieren)
     
@@ -235,4 +243,3 @@ if st.session_state.get("df_stierenkaart") is not None:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     st.success("Excel-bestand is succesvol gegenereerd!")
-
