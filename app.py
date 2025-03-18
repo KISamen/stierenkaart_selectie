@@ -47,8 +47,8 @@ if st.button("Genereer Stierenkaart"):
             st.stop()
         if found_key != standard_key:
             df_crv.rename(columns={found_key: standard_key}, inplace=True)
-        # Zorg dat de merge key als string wordt behandeld
-        df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip()
+        # Zorg dat de merge key als string wordt behandeld en naar hoofdletters wordt omgezet
+        df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip().str.upper()
         
         st.write(f"Gebruik merge key: **{standard_key}**")
         
@@ -61,12 +61,12 @@ if st.button("Genereer Stierenkaart"):
         if found_key_joop:
             if found_key_joop != standard_key:
                 df_joop.rename(columns={found_key_joop: standard_key}, inplace=True)
-            df_joop[standard_key] = df_joop[standard_key].astype(str).str.strip()
+            df_joop[standard_key] = df_joop[standard_key].astype(str).str.strip().str.upper()
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
         # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bv. 'stiecode' of 'stiercode')
-        pim_key_variants = ["stiercode", "Stiercode NL / KI code", "Stiecode", "Stiercode"]
+        pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
         found_key_pim = None
         for variant in pim_key_variants:
             if variant in df_pim.columns:
@@ -75,20 +75,20 @@ if st.button("Genereer Stierenkaart"):
         if found_key_pim:
             if found_key_pim != standard_key:
                 df_pim.rename(columns={found_key_pim: standard_key}, inplace=True)
-            df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip()
+            df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
         else:
             st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode' of 'stiercode'.")
             st.info(f"Beschikbare kolommen in 'Pim K.I. Samen': {df_pim.columns.tolist()}")
             # Gebruik de override (standaard: "Stiercode NL / KI code")
             if pim_override in df_pim.columns:
                 df_pim.rename(columns={pim_override: standard_key}, inplace=True)
-                df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip()
+                df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
             else:
                 st.error(f"Kolom '{pim_override}' niet gevonden in 'Pim K.I. Samen'.")
                 st.stop()
         
         # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bv. 'artikelnummer')
-        prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer", "Artikelnr."]
+        prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
         found_key_prijs = None
         for variant in prijslijst_key_variants:
             if variant in df_prijs.columns:
@@ -97,14 +97,14 @@ if st.button("Genereer Stierenkaart"):
         if found_key_prijs:
             if found_key_prijs != standard_key:
                 df_prijs.rename(columns={found_key_prijs: standard_key}, inplace=True)
-            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip()
+            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
         else:
             st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
             st.info(f"Beschikbare kolommen in 'Prijslijst': {df_prijs.columns.tolist()}")
             # Gebruik de override (standaard: "Artikelnr.")
             if prijs_override in df_prijs.columns:
                 df_prijs.rename(columns={prijs_override: standard_key}, inplace=True)
-                df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip()
+                df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
             else:
                 st.error(f"Kolom '{prijs_override}' niet gevonden in 'Prijslijst'.")
                 st.stop()
