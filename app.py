@@ -5,7 +5,7 @@ import io
 st.title("Stierenkaart Generator")
 st.write("Upload de volgende bestanden om de stierenkaart te genereren:")
 
-# Bestandsuploaders voor de verschillende bronbestanden
+# Bestandsuploaders
 uploaded_crv = st.file_uploader("Upload Bronbestand CRV (bijv. 'Bronbestand CRV DEC2024.xlsx')", type=["xlsx"])
 uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman (bijv. 'Bronbestand Joop Olieman.xlsx')", type=["xlsx"])
 uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xlsx')", type=["xlsx"])
@@ -22,11 +22,11 @@ if st.button("Genereer Stierenkaart"):
             df_pim = pd.read_excel(uploaded_pim)
             df_prijs = pd.read_excel(uploaded_prijs)
             
-            # Definieer de standaard merge key
+            # Definieer de standaard merge key en mogelijke varianten
             standard_key = "KI-code"
-            
-            # Zoek naar varianten in het CRV-bestand
             key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
+            
+            # Zoek in het CRV-bestand naar een variant en hernoem naar de standaard key
             found_key = None
             for variant in key_variants:
                 if variant in df_crv.columns:
@@ -40,7 +40,7 @@ if st.button("Genereer Stierenkaart"):
             
             st.write(f"Gebruik merge key: **{standard_key}**")
             
-            # In het Joop Olieman-bestand: zoek naar dezelfde merge key-varianten
+            # Joop Olieman-bestand: zoek naar een variant en hernoem indien gevonden
             found_key_joop = None
             for variant in key_variants:
                 if variant in df_joop.columns:
@@ -52,7 +52,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
             
-            # In het Pim K.I. Samen-bestand: zoek naar varianten voor de sleutel
+            # Pim K.I. Samen-bestand: zoek naar varianten voor de sleutel, bv. 'stiecode' of 'stiercode'
             pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
             found_key_pim = None
             for variant in pim_key_variants:
@@ -65,7 +65,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode' of 'stiercode'.")
             
-            # In het Prijslijst-bestand: zoek naar varianten voor 'artikelnummer'
+            # Prijslijst-bestand: zoek naar varianten voor 'artikelnummer'
             prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
             found_key_prijs = None
             for variant in prijslijst_key_variants:
@@ -78,28 +78,92 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
             
-            # Start met het CRV-bestand als basis en voeg de andere data toe via left-joins
+            # Voeg de data samen op basis van de merge key (start met CRV als basis)
             df_merged = df_crv.copy()
-            
             if standard_key in df_joop.columns:
                 df_merged = pd.merge(df_merged, df_joop, on=standard_key, how='left')
             else:
                 st.warning("Merge key niet gevonden in het Joop Olieman-bestand.")
-            
             if standard_key in df_pim.columns:
                 df_merged = pd.merge(df_merged, df_pim, on=standard_key, how='left')
             else:
                 st.warning("Merge key niet gevonden in het Pim K.I. Samen-bestand.")
-            
             if standard_key in df_prijs.columns:
                 df_merged = pd.merge(df_merged, df_prijs, on=standard_key, how='left')
             else:
                 st.warning("Merge key niet gevonden in het Prijslijst-bestand.")
             
-            # Genereer een Excelbestand met de sheetnaam 'fokstieren'
+            # Definitie van de gewenste kolomvolgorde en titels (volgens voorbeeld in tab 'fokstieren')
+            kolom_mapping = [
+                ("KI-code", "KI-code"),
+                ("Stier", "Stiernaam"),
+                ("Afstamming V", "Vader"),
+                ("Afstamming MV", "M-vader"),
+                ("PFW", "PFW"),
+                ("aAa", "aAa"),
+                ("beta caseïne", "beta caseïne"),
+                ("kappa Caseïne", "kappa Caseïne"),
+                ("Prijs", "Prijs"),
+                ("Prijs gesekst", "Prijs gesekst"),
+                ("% betrouwbaarheid", "Bt_1"),
+                ("kg melk", "kgM"),
+                ("% vet", "%V"),
+                ("% eiwit", "%E"),
+                ("kg vet", "kgV"),
+                ("kg eiwit", "kgE"),
+                ("INET", "INET"),
+                ("NVI", "NVI"),
+                ("TIP", "TIP"),
+                ("% betrouwbaar", "Bt_5"),
+                ("frame", "F"),
+                ("uier", "U"),
+                ("benen", "B_6"),
+                ("totaal", "Ext"),
+                ("hoogtemaat", "HT"),
+                ("voorhand", "VH"),
+                ("inhoud", "IH"),
+                ("openheid", "OH"),
+                ("conditie score", "CS"),
+                ("kruisligging", "KL"),
+                ("kruisbreedte", "KB"),
+                ("beenstand achter", "BA"),
+                ("beenstand zij", "BZ"),
+                ("klauwhoek", "KH"),
+                ("voorbeenstand", "VB"),
+                ("beengebruik", "BG"),
+                ("vooruieraanhechting", "VA"),
+                ("voorspeenplaatsing", "VP"),
+                ("speenlengte", "SL"),
+                ("uierdiepte", "UD"),
+                ("achteruierhoogte", "AH"),
+                ("ophangband", "OB"),
+                ("achterspeenplaatsing", "AP"),
+                ("Geboortegemak", "Geb"),
+                ("melksnelheid", "MS"),
+                ("celgetal", "Cgt"),
+                ("vruchtbaarheid", "Vru"),
+                ("karakter", "KA"),
+                ("laatrijpheid", "Ltrh"),
+                ("Persistentie", "Pers"),
+                ("klauwgezondheid", "Kgh"),
+                ("levensduur", "Lvd"),
+            ]
+            
+            # Bouw de finale DataFrame op basis van de mapping
+            final_data = {}
+            for final_header, source_column in kolom_mapping:
+                if source_column in df_merged.columns:
+                    final_data[final_header] = df_merged[source_column]
+                else:
+                    # Als de bronkolom ontbreekt, voeg een lege kolom toe
+                    final_data[final_header] = None
+            
+            final_df = pd.DataFrame(final_data)
+            
+            # Exporteer de finale DataFrame naar een Excelbestand met sheetnaam 'fokstieren'
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_merged.to_excel(writer, sheet_name='fokstieren', index=False)
+                final_df.to_excel(writer, sheet_name='fokstieren', index=False)
             output.seek(0)
             
             st.download_button(
