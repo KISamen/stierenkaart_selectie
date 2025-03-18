@@ -7,7 +7,7 @@ st.title("Stierenkaart Generator")
 st.markdown("""
 Upload de volgende bestanden:
 - **Bronbestand CRV DEC2024.xlsx** (bevat kolommen zoals "KI-Code", "Vader", "M-vader", etc.)
-- **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data, zoals PFW, AAacode, Betacasine, Kappa-caseine)
+- **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data: PFW, AAacode, Betacasine, Kappa-caseine)
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 """)
@@ -41,11 +41,15 @@ if st.button("Genereer Stierenkaart"):
             # Debug: toon kolomnamen van de PIM-export
             st.write("Kolommen in PIM bestand:", df_pim.columns.tolist())
             
-            # Normaliseer de KI-code in elk bestand (zet in hoofdletters en strip spaties)
+            # Normaliseer de KI-code in elk bestand (zet in hoofdletters en verwijder spaties)
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
+            
+            # Debug: toon een voorbeeld van de KI-codes in CRV en PIM
+            st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
+            st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
             # Maak een tijdelijke merge-sleutel in alle bestanden
             df_crv["temp_key"] = df_crv["KI_Code"]
@@ -53,7 +57,7 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst["temp_key"] = df_prijslijst["KI_Code"]
             df_joop["temp_key"] = df_joop["KI_Code"]
             
-            # Debug: toon aantal gemeenschappelijke KI-codes tussen CRV en PIM
+            # Controleer het aantal gemeenschappelijke KI-codes
             common_keys = set(df_crv["temp_key"]).intersection(set(df_pim["temp_key"]))
             st.write("Aantal gemeenschappelijke KI-codes tussen CRV en PIM:", len(common_keys))
             
@@ -61,14 +65,14 @@ if st.button("Genereer Stierenkaart"):
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
-            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor mapping
+            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor latere mapping
             df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
             # Debug: bekijk de kolomnamen in de merged dataframe
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Definieer de mappingtabel
+            # Definieer de mappingtabel (gebruik de exacte titels zoals in de bestanden)
             mapping_table = [
                 {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
@@ -141,7 +145,7 @@ if st.button("Genereer Stierenkaart"):
                     elif (titel + "_pim") in df_merged.columns and not df_merged[titel + "_pim"].isnull().all():
                         final_data[std_naam] = df_merged[titel + "_pim"]
                     else:
-                        # Als de kolom niet bestaat in df_merged, controleer in df_pim; indien niet aanwezig, laat leeg
+                        # Als de kolom niet in df_merged staat, probeer dan vanuit df_pim (indien de kolom bestaat)
                         if titel in df_pim.columns:
                             df_pim_temp = df_pim.copy()
                             df_pim_temp.set_index("KI_Code", inplace=True)
