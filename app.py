@@ -127,7 +127,8 @@ if st.button("Genereer Stierenkaart"):
 
             # Converteer de uiteindelijke dataframe naar een Excel-bestand in geheugen
             output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            # Gebruik engine 'openpyxl' in plaats van 'xlsxwriter'
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_stierenkaart.to_excel(writer, sheet_name='stierenkaart', index=False)
             excel_data = output.getvalue()
 
