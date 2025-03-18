@@ -35,7 +35,7 @@ if st.button("Genereer Stierenkaart"):
         df_prijslijst = load_excel(uploaded_prijslijst)
         df_joop = load_excel(uploaded_joop)
 
-        # Gebruik expliciete check op None
+        # Controleer expliciet of een van de DataFrames None is
         if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Er is een fout opgetreden bij het laden van een of meerdere bestanden.")
         else:
@@ -45,11 +45,14 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst.rename(columns={"Artikelnr.": "KI_Code"}, inplace=True)
             df_joop.rename(columns={"Kicode": "KI_Code"}, inplace=True)
 
-            # Eerste merge: CRV als basis, voeg PIM toe
+            # Zet de merge key in alle DataFrames om naar string en strip spaties
+            for df in [df_crv, df_pim, df_prijslijst, df_joop]:
+                if "KI_Code" in df.columns:
+                    df["KI_Code"] = df["KI_Code"].astype(str).str.strip()
+
+            # Merge de DataFrames
             df_merged = pd.merge(df_crv, df_pim, on="KI_Code", how="left", suffixes=("", "_pim"))
-            # Voeg prijslijst toe
             df_merged = pd.merge(df_merged, df_prijslijst, on="KI_Code", how="left", suffixes=("", "_prijslijst"))
-            # Voeg Joop Olieman toe
             df_merged = pd.merge(df_merged, df_joop, on="KI_Code", how="left", suffixes=("", "_joop"))
 
             # Definieer de kolommapping voor de stierenkaart
