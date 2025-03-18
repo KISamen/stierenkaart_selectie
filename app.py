@@ -13,8 +13,10 @@ uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')",
 
 st.write("**Kolom overrides:**")
 # Geef handmatig de kolomnaam op als de automatische detectie faalt.
-pim_override = st.text_input("Geef de kolomnaam in 'Pim K.I. Samen' voor KI-code (default: stiecode)", value="stiecode")
-prijs_override = st.text_input("Geef de kolomnaam in 'Prijslijst' voor KI-code (default: artikelnummer)", value="artikelnummer")
+# Voor Pim K.I. Samen is de standaard kolomnaam nu "Stiercode NL / KI code"
+pim_override = st.text_input("Geef de kolomnaam in 'Pim K.I. Samen' voor KI-code", value="Stiercode NL / KI code")
+# Voor Prijslijst is de standaard kolomnaam nu "Artikelnr."
+prijs_override = st.text_input("Geef de kolomnaam in 'Prijslijst' voor KI-code", value="Artikelnr.")
 
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_joop and uploaded_pim and uploaded_prijs):
@@ -31,7 +33,7 @@ if st.button("Genereer Stierenkaart"):
         standard_key = "KI-code"
         key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
         
-        # Zoek in het CRV-bestand naar een variant en hernoem naar de standaard key
+        # CRV-bestand: zoek naar een variant en hernoem naar de standaard key
         found_key = None
         for variant in key_variants:
             if variant in df_crv.columns:
@@ -42,6 +44,9 @@ if st.button("Genereer Stierenkaart"):
             st.stop()
         if found_key != standard_key:
             df_crv.rename(columns={found_key: standard_key}, inplace=True)
+        # Zorg dat de merge key als string wordt behandeld
+        df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip()
+        
         st.write(f"Gebruik merge key: **{standard_key}**")
         
         # Joop Olieman-bestand: zoek naar een variant en hernoem indien gevonden
@@ -53,6 +58,7 @@ if st.button("Genereer Stierenkaart"):
         if found_key_joop:
             if found_key_joop != standard_key:
                 df_joop.rename(columns={found_key_joop: standard_key}, inplace=True)
+            df_joop[standard_key] = df_joop[standard_key].astype(str).str.strip()
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
@@ -66,12 +72,14 @@ if st.button("Genereer Stierenkaart"):
         if found_key_pim:
             if found_key_pim != standard_key:
                 df_pim.rename(columns={found_key_pim: standard_key}, inplace=True)
+            df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip()
         else:
             st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode' of 'stiercode'.")
             st.info(f"Beschikbare kolommen in 'Pim K.I. Samen': {df_pim.columns.tolist()}")
             # Probeer de override in te stellen
             if pim_override in df_pim.columns:
                 df_pim.rename(columns={pim_override: standard_key}, inplace=True)
+                df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip()
             else:
                 st.error(f"Kolom '{pim_override}' niet gevonden in 'Pim K.I. Samen'.")
                 st.stop()
@@ -86,11 +94,13 @@ if st.button("Genereer Stierenkaart"):
         if found_key_prijs:
             if found_key_prijs != standard_key:
                 df_prijs.rename(columns={found_key_prijs: standard_key}, inplace=True)
+            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip()
         else:
             st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
             st.info(f"Beschikbare kolommen in 'Prijslijst': {df_prijs.columns.tolist()}")
             if prijs_override in df_prijs.columns:
                 df_prijs.rename(columns={prijs_override: standard_key}, inplace=True)
+                df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip()
             else:
                 st.error(f"Kolom '{prijs_override}' niet gevonden in 'Prijslijst'.")
                 st.stop()
@@ -172,7 +182,6 @@ if st.button("Genereer Stierenkaart"):
             if source_column in df_merged.columns:
                 final_data[final_header] = df_merged[source_column]
             else:
-                # Voeg lege kolom toe als de bronkolom niet bestaat
                 final_data[final_header] = None
         
         final_df = pd.DataFrame(final_data)
