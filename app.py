@@ -11,7 +11,7 @@ Upload de volgende bestanden:
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 
-Na het verwerken kun je hieronder aangeven welke stieren in de hoofd-export moeten komen.
+Na verwerking kun je aangeven welke stieren in de hoofd-export moeten komen. De overige stieren komen in een apart tabblad.
 """)
 
 # Bestanden uploaden
@@ -49,7 +49,7 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
-            # Debug: toon een voorbeeld van de KI-codes in CRV en PIM
+            # Debug: toon voorbeelden van de KI-codes
             st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
             st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
@@ -67,7 +67,7 @@ if st.button("Genereer Stierenkaart"):
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
-            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor latere mapping
+            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor mapping
             df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
@@ -171,13 +171,15 @@ if st.button("Genereer Stierenkaart"):
             df_stierenkaart = pd.DataFrame(final_data)
             df_mapping = pd.DataFrame(mapping_table)
             
-            # Nu: stel de gebruiker in staat te kiezen welke stieren (bulls) in de hoofd-export moeten komen.
-            # We gaan er hierbij vanuit dat de kolom "Stier" de stiernaam bevat.
+            # Laat de gebruiker meerdere stieren selecteren en toon een overzicht van de selectie
             if "Stier" in df_stierenkaart.columns:
                 options = sorted(df_stierenkaart["Stier"].dropna().unique().tolist())
             else:
                 options = []
             selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options)
+            
+            # Toon in de interface een lijst met de geselecteerde stieren
+            st.write("Geselecteerde stieren:", selected_stieren)
             
             # Split de data op basis van de selectie
             if selected_stieren:
@@ -189,9 +191,9 @@ if st.button("Genereer Stierenkaart"):
                 df_overig = df_stierenkaart.copy()
             
             # Schrijf de resultaten naar één Excel-bestand met drie sheets:
-            #  - "Stierenkaart" voor de geselecteerde stieren
-            #  - "Overige stieren" voor de overige stieren
-            #  - "Mapping" met de mappingtabel
+            # - "Stierenkaart" voor de geselecteerde stieren
+            # - "Overige stieren" voor de overige stieren
+            # - "Mapping" met de mappingtabel
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
