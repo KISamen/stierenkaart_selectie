@@ -10,11 +10,15 @@ Upload de volgende bestanden:
 - **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data: PFW, AAa code, Betacasine, Kappa-caseine)
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
+
+Na verwerking kun je aangeven welke stieren in de hoofd-export moeten komen. De overige stieren komen in een apart tabblad.
 """)
 
-# Zorg dat er een plek is in de session state om de uiteindelijke stierenkaart op te slaan
+# Zorg dat er een plek is in de session state om de resultaten op te slaan
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
+if "df_mapping" not in st.session_state:
+    st.session_state.df_mapping = None
 
 # Bestanden uploaden
 uploaded_crv = st.file_uploader("Upload Bronbestand CRV DEC2024.xlsx", type=["xlsx"])
@@ -46,7 +50,7 @@ if st.button("Genereer Stierenkaart"):
             # Debug: toon kolomnamen van de PIM-export
             st.write("Kolommen in PIM bestand:", df_pim.columns.tolist())
             
-            # Normaliseer de KI-code in elk bestand (hoofdletters en trim)
+            # Normaliseer de KI-code in elk bestand (zet in hoofdletters en verwijder spaties)
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
@@ -66,11 +70,11 @@ if st.button("Genereer Stierenkaart"):
             common_keys = set(df_crv["temp_key"]).intersection(set(df_pim["temp_key"]))
             st.write("Aantal gemeenschappelijke KI-codes tussen CRV en PIM:", len(common_keys))
             
-            # Merge de dataframes: CRV als basis (left join)
+            # Merge de dataframes: gebruik CRV als basis (left join)
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
-            # Voeg ook de KI_Code (van CRV) toe voor mapping
+            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor mapping
             df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
@@ -174,12 +178,14 @@ if st.button("Genereer Stierenkaart"):
             df_stierenkaart = pd.DataFrame(final_data)
             df_mapping = pd.DataFrame(mapping_table)
             
-            # Sla het resultaat op in de session state zodat het niet verloren gaat bij interactie
+            # Sla de resultaten op in de session state
             st.session_state.df_stierenkaart = df_stierenkaart
+            st.session_state.df_mapping = df_mapping
 
-# Als er een stierenkaart beschikbaar is (in de session state), toon dan de selectie-opties
+# Als er een stierenkaart beschikbaar is, toon dan de selectie-opties
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
+    df_mapping = st.session_state.df_mapping
 
     # Laat de gebruiker meerdere stieren selecteren op basis van de kolom "Stier"
     if "Stier" in df_stierenkaart.columns:
@@ -196,7 +202,6 @@ if st.session_state.get("df_stierenkaart") is not None:
         df_selected = df_stierenkaart[df_stierenkaart["Stier"].isin(selected_stieren)]
         df_overig = df_stierenkaart[~df_stierenkaart["Stier"].isin(selected_stieren)]
     else:
-        # Als er niets geselecteerd is, neem dan alles mee in 'Overige stieren'
         df_selected = pd.DataFrame(columns=df_stierenkaart.columns)
         df_overig = df_stierenkaart.copy()
     
