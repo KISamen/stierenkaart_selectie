@@ -3,179 +3,135 @@ import pandas as pd
 import io
 
 st.title("Stierenkaart Generator")
-st.write("Upload de volgende bestanden om de stierenkaart te genereren:")
 
-# Bestandsuploaders
-uploaded_crv = st.file_uploader("Upload Bronbestand CRV (bijv. 'Bronbestand CRV DEC2024.xlsx')", type=["xlsx"])
-uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman (bijv. 'Bronbestand Joop Olieman.xlsx')", type=["xlsx"])
-uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xlsx')", type=["xlsx"])
-uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')", type=["xlsx"])
+st.markdown("""
+Upload de volgende bestanden:
+- **Bronbestand CRV DEC2024.xlsx** (KI-Code in kolom A)
+- **PIM K.I. Samen.xlsx** (Stiercode NL / KI code in kolom M)
+- **Prijslijst.xlsx** (Artikelnr. als KI-code)
+- **Bronbestand Joop Olieman.xlsx** (Kicode in kolom B)
+""")
+
+# Bestanden uploaden
+uploaded_crv = st.file_uploader("Upload Bronbestand CRV DEC2024.xlsx", type=["xlsx"])
+uploaded_pim = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
+uploaded_prijslijst = st.file_uploader("Upload Prijslijst.xlsx", type=["xlsx"])
+uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"])
+
+def load_excel(file):
+    try:
+        return pd.read_excel(file)
+    except Exception as e:
+        st.error(f"Fout bij het laden van het bestand: {e}")
+        return None
 
 if st.button("Genereer Stierenkaart"):
-    if not (uploaded_crv and uploaded_joop and uploaded_pim and uploaded_prijs):
-        st.warning("Zorg dat alle bestanden zijn geüpload!")
-        st.stop()
-    try:
-        # Lees de Excel-bestanden in
-        df_crv = pd.read_excel(uploaded_crv)
-        df_joop = pd.read_excel(uploaded_joop)
-        df_pim = pd.read_excel(uploaded_pim)
-        df_prijs = pd.read_excel(uploaded_prijs)
-        
-        # Strip witruimtes in alle kolomnamen
-        for df in [df_crv, df_joop, df_pim, df_prijs]:
-            df.columns = df.columns.str.strip()
-        
-        # Definieer de standaard merge key voor de uiteindelijke output
-        standard_key = "KI-code"
-        key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
-        
-        # CRV-bestand: zoek naar een variant en hernoem naar standaard_key
-        found_key = None
-        for variant in key_variants:
-            if variant in df_crv.columns:
-                found_key = variant
-                break
-        if not found_key:
-            st.error("Geen merge key gevonden in het CRV-bestand. Zorg dat een variant van 'KI-code' aanwezig is.")
-            st.stop()
-        if found_key != standard_key:
-            df_crv.rename(columns={found_key: standard_key}, inplace=True)
-        # Converteer merge key in CRV naar string, verwijder witruimtes en zet om naar hoofdletters
-        df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip().str.upper()
-        
-        st.write(f"Gebruik merge key: **{standard_key}**")
-        
-        # Joop Olieman-bestand: zoek naar een variant en hernoem indien gevonden
-        found_key_joop = None
-        for variant in key_variants:
-            if variant in df_joop.columns:
-                found_key_joop = variant
-                break
-        if found_key_joop:
-            if found_key_joop != standard_key:
-                df_joop.rename(columns={found_key_joop: standard_key}, inplace=True)
-            df_joop[standard_key] = df_joop[standard_key].astype(str).str.strip().str.upper()
+    if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
+        st.error("Zorg dat je alle vereiste bestanden uploadt!")
+    else:
+        # Lees de bestanden
+        df_crv = load_excel(uploaded_crv)
+        df_pim = load_excel(uploaded_pim)
+        df_prijslijst = load_excel(uploaded_prijslijst)
+        df_joop = load_excel(uploaded_joop)
+
+        if None in [df_crv, df_pim, df_prijslijst, df_joop]:
+            st.error("Er is een fout opgetreden bij het laden van een of meerdere bestanden.")
         else:
-            st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
-        
-        # Pim K.I. Samen-bestand: verwacht exact de kolom "Stiercode NL / KI code"
-        if "Stiercode NL / KI code" not in df_pim.columns:
-            st.error("In het Pim K.I. Samen-bestand ontbreekt de kolom 'Stiercode NL / KI code'.")
-            st.stop()
-        else:
-            df_pim.rename(columns={"Stiercode NL / KI code": standard_key}, inplace=True)
-            df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
-        
-        # Prijslijst-bestand: verwacht exact de kolom "Artikelnr."
-        if "Artikelnr." not in df_prijs.columns:
-            st.error("In het Prijslijst-bestand ontbreekt de kolom 'Artikelnr.'.")
-            st.stop()
-        else:
-            df_prijs.rename(columns={"Artikelnr.": standard_key}, inplace=True)
-            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
-        
-        # Debug: toon aantal overeenkomende sleutels tussen CRV en Pim
-        match_count = len(set(df_crv[standard_key]) & set(df_pim[standard_key]))
-        st.write("Aantal overeenkomende sleutels tussen CRV en Pim:", match_count)
-        
-        # Verwijder de kolommen uit CRV zodat de data uit Pim niet overschreven wordt
-        cols_override = ["PFW", "aAa", "beta caseïne", "kappa Caseïne"]
-        df_crv.drop(columns=cols_override, errors='ignore', inplace=True)
-        
-        # Wijzig de merge-volgorde: eerst CRV met Pim, daarna met Joop, daarna met Prijslijst
-        df_merged = pd.merge(df_crv, df_pim, on=standard_key, how='left')
-        
-        if standard_key in df_joop.columns:
-            # Voeg data uit Joop toe, met suffix indien nodig
-            df_merged = pd.merge(df_merged, df_joop, on=standard_key, how='left', suffixes=("", "_joop"))
-        else:
-            st.warning("Merge key niet gevonden in het Joop Olieman-bestand.")
-        
-        if standard_key in df_prijs.columns:
-            # Voeg data uit Prijslijst toe, met suffix indien nodig
-            df_merged = pd.merge(df_merged, df_prijs, on=standard_key, how='left', suffixes=("", "_prijs"))
-        else:
-            st.warning("Merge key niet gevonden in het Prijslijst-bestand.")
-        
-        # Definitie van de gewenste kolomvolgorde en titels (volgens voorbeeld in tabblad 'fokstieren')
-        kolom_mapping = [
-            ("KI-code", "KI-code"),
-            ("Stier", "Stiernaam"),
-            ("Afstamming V", "Vader"),
-            ("Afstamming MV", "M-vader"),
-            ("PFW", "PFW"),
-            ("aAa", "aAa"),
-            ("beta caseïne", "beta caseïne"),
-            ("kappa Caseïne", "kappa Caseïne"),
-            ("Prijs", "Prijs"),
-            ("Prijs gesekst", "Prijs gesekst"),
-            ("% betrouwbaarheid", "Bt_1"),
-            ("kg melk", "kgM"),
-            ("% vet", "%V"),
-            ("% eiwit", "%E"),
-            ("kg vet", "kgV"),
-            ("kg eiwit", "kgE"),
-            ("INET", "INET"),
-            ("NVI", "NVI"),
-            ("TIP", "TIP"),
-            ("% betrouwbaar", "Bt_5"),
-            ("frame", "F"),
-            ("uier", "U"),
-            ("benen", "B_6"),
-            ("totaal", "Ext"),
-            ("hoogtemaat", "HT"),
-            ("voorhand", "VH"),
-            ("inhoud", "IH"),
-            ("openheid", "OH"),
-            ("conditie score", "CS"),
-            ("kruisligging", "KL"),
-            ("kruisbreedte", "KB"),
-            ("beenstand achter", "BA"),
-            ("beenstand zij", "BZ"),
-            ("klauwhoek", "KH"),
-            ("voorbeenstand", "VB"),
-            ("beengebruik", "BG"),
-            ("vooruieraanhechting", "VA"),
-            ("voorspeenplaatsing", "VP"),
-            ("speenlengte", "SL"),
-            ("uierdiepte", "UD"),
-            ("achteruierhoogte", "AH"),
-            ("ophangband", "OB"),
-            ("achterspeenplaatsing", "AP"),
-            ("Geboortegemak", "Geb"),
-            ("melksnelheid", "MS"),
-            ("celgetal", "Cgt"),
-            ("vruchtbaarheid", "Vru"),
-            ("karakter", "KA"),
-            ("laatrijpheid", "Ltrh"),
-            ("Persistentie", "Pers"),
-            ("klauwgezondheid", "Kgh"),
-            ("levensduur", "Lvd"),
-        ]
-        
-        # Bouw de finale DataFrame op basis van de mapping
-        final_data = {}
-        for final_header, source_column in kolom_mapping:
-            if source_column in df_merged.columns:
-                final_data[final_header] = df_merged[source_column]
-            else:
-                final_data[final_header] = None
-        
-        final_df = pd.DataFrame(final_data)
-        
-        # Exporteer de finale DataFrame naar een Excelbestand met de sheetnaam 'fokstieren'
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            final_df.to_excel(writer, sheet_name='fokstieren', index=False)
-        output.seek(0)
-        
-        st.download_button(
-            label="Download Stierenkaart Excel",
-            data=output,
-            file_name="stierenkaart.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        st.success("Stierenkaart succesvol gegenereerd!")
-    except Exception as e:
-        st.error(f"Er is een fout opgetreden: {e}")
+            # Zorg dat de merge key in alle dataframes dezelfde naam heeft
+            # Hier wordt aangenomen dat de kolomnamen exact zo heten. Pas zonodig aan.
+            df_crv.rename(columns={"KI-Code": "KI_Code"}, inplace=True)
+            df_pim.rename(columns={"Stiercode NL / KI code": "KI_Code"}, inplace=True)
+            df_prijslijst.rename(columns={"Artikelnr.": "KI_Code"}, inplace=True)
+            df_joop.rename(columns={"Kicode": "KI_Code"}, inplace=True)
+
+            # Eerste merge: CRV als basis, voeg PIM toe
+            df_merged = pd.merge(df_crv, df_pim, on="KI_Code", how="left", suffixes=("", "_pim"))
+            # Voeg prijslijst toe
+            df_merged = pd.merge(df_merged, df_prijslijst, on="KI_Code", how="left", suffixes=("", "_prijslijst"))
+            # Voeg Joop Olieman toe
+            df_merged = pd.merge(df_merged, df_joop, on="KI_Code", how="left", suffixes=("", "_joop"))
+
+            # Definieer de kolommapping voor de stierenkaart
+            kolom_mapping = {
+                "KI-Code": "KI_Code",
+                "Eigenaarscode": "Eigenaarscode",        # Pas aan indien de kolomnaam anders is
+                "Stiernummer": "Stiernummer",            # idem
+                "Stiernaam": "Stier",                    # uit CRV (bijvoorbeeld)
+                "Erf-fact": "Erf-fact",                  # idem
+                "Vader": "Afstamming V",                 # uit CRV
+                "M-vader": "Afstamming MV",              # uit CRV
+                "PFW": "PFW",                          # uit PIM K.I. Samen
+                "aAa": "aAa",                          # uit PIM K.I. Samen
+                "Beta caseïne": "beta caseïne",        # uit PIM K.I. Samen
+                "Kappa caseïne": "kappa Caseïne",      # uit PIM K.I. Samen
+                "Prijs": "Prijs",                      # uit Prijslijst
+                "Prijs gesekst": "Prijs gesekst",      # uit Prijslijst
+                "Bt_1": "% betrouwbaarheid",           # uit CRV
+                "kgM": "kg melk",                      # uit CRV
+                "%V": "% vet",                         # uit CRV
+                "%E": "% eiwit",                       # uit CRV
+                "kgV": "kg vet",                       # uit CRV
+                "kgE": "kg eiwit",                     # uit CRV
+                "INET": "INET",                        # uit CRV
+                "NVI": "NVI",                          # uit CRV
+                "TIP": "TIP",                          # uit Joop Olieman
+                "Bt_5": "% betrouwbaar",               # uit CRV (controleer de kolomnaam)
+                "F": "frame",                          # uit CRV
+                "U": "uier",                           # uit CRV
+                "B_6": "benen",                        # uit CRV
+                "Ext": "totaal",                       # uit CRV
+                "HT": "hoogtemaat",                    # uit CRV
+                "VH": "voorhand",                      # uit CRV
+                "IH": "inhoud",                        # uit CRV
+                "OH": "openheid",                      # uit CRV
+                "CS": "conditie score",                # uit CRV
+                "KL": "kruisligging",                  # uit CRV
+                "KB": "kruisbreedte",                  # uit CRV
+                "BA": "beenstand achter",              # uit CRV
+                "BZ": "beenstand zij",                 # uit CRV
+                "KH": "klauwhoek",                     # uit CRV
+                "VB": "voorbeenstand",                 # uit CRV
+                "BG": "beengebruik",                   # uit CRV
+                "VA": "vooruieraanhechting",            # uit CRV
+                "VP": "voorspeenplaatsing",             # uit CRV
+                "SL": "speenlengte",                   # uit CRV
+                "UD": "uierdiepte",                    # uit CRV
+                "AH": "achteruierhoogte",              # uit CRV
+                "OB": "ophangband",                    # uit CRV
+                "AP": "achterspeenplaatsing",          # uit CRV
+                "Geb": "Geboortegemak",                # uit CRV
+                "MS": "melksnelheid",                  # uit CRV
+                "Cgt": "celgetal",                     # uit CRV
+                "Vru": "vruchtbaarheid",               # uit CRV
+                "KA": "karakter",                      # uit CRV
+                "Ltrh": "laatrijpheid",                # uit CRV
+                "Pers": "Persistentie",                # uit CRV
+                "Kgh": "klauwgezondheid",              # uit CRV
+                "Lvd": "levensduur"                    # uit CRV
+            }
+
+            # Bouw de uiteindelijke dataframe op basis van de mapping.
+            # Indien een bepaalde bron/kolom niet aanwezig is, wordt de kolom gevuld met lege waarden.
+            data = {}
+            for kolom_stierenkaart, bron_kolom in kolom_mapping.items():
+                if bron_kolom in df_merged.columns:
+                    data[kolom_stierenkaart] = df_merged[bron_kolom]
+                else:
+                    data[kolom_stierenkaart] = None
+
+            df_stierenkaart = pd.DataFrame(data)
+
+            # Converteer de uiteindelijke dataframe naar een Excel-bestand in geheugen
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_stierenkaart.to_excel(writer, sheet_name='stierenkaart', index=False)
+            excel_data = output.getvalue()
+
+            st.download_button(
+                label="Download gegenereerde stierenkaart",
+                data=excel_data,
+                file_name="stierenkaart.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            st.success("Stierenkaart Excel is succesvol gegenereerd!")
