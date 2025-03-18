@@ -66,7 +66,7 @@ if st.button("Genereer Stierenkaart"):
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
         # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bv. 'stiecode' of 'stiercode')
-        pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
+        pim_key_variants = ["stiercode", "Stiercode NL / KI code", "Stiecode", "Stiercode"]
         found_key_pim = None
         for variant in pim_key_variants:
             if variant in df_pim.columns:
@@ -88,7 +88,7 @@ if st.button("Genereer Stierenkaart"):
                 st.stop()
         
         # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bv. 'artikelnummer')
-        prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
+        prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer", "Artikelnr."]
         found_key_prijs = None
         for variant in prijslijst_key_variants:
             if variant in df_prijs.columns:
