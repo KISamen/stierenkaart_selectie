@@ -5,7 +5,6 @@ import io
 st.title("Stierenkaart Generator")
 st.write("Upload de volgende bestanden om de stierenkaart te genereren:")
 
-# Bestandsuploaders voor de verschillende bronbestanden
 uploaded_crv = st.file_uploader("Upload Bronbestand CRV (bijv. 'Bronbestand CRV DEC2024.xlsx')", type=["xlsx"])
 uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman (bijv. 'Bronbestand Joop Olieman.xlsx')", type=["xlsx"])
 uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xlsx')", type=["xlsx"])
@@ -22,50 +21,67 @@ if st.button("Genereer Stierenkaart"):
             df_pim = pd.read_excel(uploaded_pim)
             df_prijs = pd.read_excel(uploaded_prijs)
             
-            # Gebruik als basis de CRV file en verwacht dat deze de kolom "KI-code" bevat
-            if "KI-code" in df_crv.columns:
-                base_key = "KI-code"
-            else:
-                st.error("De kolom 'KI-code' is niet aanwezig in het CRV-bestand. Zorg voor consistente data.")
+            # Stel een standaard merge key in
+            standard_key = "KI-code"
+            key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
+            
+            # Zoek naar de merge key in het CRV-bestand en hernoem naar de standaard key
+            found_key = None
+            for variant in key_variants:
+                if variant in df_crv.columns:
+                    found_key = variant
+                    break
+            if not found_key:
+                st.error("De kolom 'KI-code' (of een variant) is niet aanwezig in het CRV-bestand. Zorg voor consistente data.")
                 st.stop()
+            if found_key != standard_key:
+                df_crv.rename(columns={found_key: standard_key}, inplace=True)
             
-            st.write(f"Gebruik merge key: **{base_key}**")
+            st.write(f"Gebruik merge key: **{standard_key}**")
             
-            # In het Joop Olieman bestand verwachten we al de kolom "KI-code"
-            if base_key not in df_joop.columns:
-                st.warning(f"In het Joop Olieman bestand ontbreekt de kolom '{base_key}'.")
+            # Voor het Joop Olieman-bestand: zoek en hernoem de merge key indien aanwezig
+            found_key_joop = None
+            for variant in key_variants:
+                if variant in df_joop.columns:
+                    found_key_joop = variant
+                    break
+            if found_key_joop:
+                if found_key_joop != standard_key:
+                    df_joop.rename(columns={found_key_joop: standard_key}, inplace=True)
+            else:
+                st.warning(f"In het Joop Olieman-bestand is geen kolom gevonden die overeenkomt met '{standard_key}'.")
             
-            # In het Pim K.I. Samen bestand hernoemen we 'stiecode' naar 'KI-code'
+            # Voor het Pim K.I. Samen-bestand: hernoem 'stiecode' naar de standaard merge key
             if "stiecode" in df_pim.columns:
-                df_pim.rename(columns={"stiecode": base_key}, inplace=True)
+                df_pim.rename(columns={"stiecode": standard_key}, inplace=True)
             else:
-                st.warning("In het Pim K.I. Samen bestand ontbreekt de kolom 'stiecode'.")
+                st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode'.")
             
-            # In het Prijslijst bestand hernoemen we 'artikelnummer' naar 'KI-code'
+            # Voor het Prijslijst-bestand: hernoem 'artikelnummer' naar de standaard merge key
             if "artikelnummer" in df_prijs.columns:
-                df_prijs.rename(columns={"artikelnummer": base_key}, inplace=True)
+                df_prijs.rename(columns={"artikelnummer": standard_key}, inplace=True)
             else:
-                st.warning("In het Prijslijst bestand ontbreekt de kolom 'artikelnummer'.")
+                st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
             
-            # Start met het CRV-bestand als basis en voeg de andere data eraan toe via left-joins
+            # Start met het CRV-bestand als basis en voeg de andere data toe via left-joins
             df_merged = df_crv.copy()
             
-            if base_key in df_joop.columns:
-                df_merged = pd.merge(df_merged, df_joop, on=base_key, how='left')
+            if standard_key in df_joop.columns:
+                df_merged = pd.merge(df_merged, df_joop, on=standard_key, how='left')
             else:
-                st.warning(f"Merge key '{base_key}' niet gevonden in het Joop Olieman bestand.")
+                st.warning(f"Merge key '{standard_key}' niet gevonden in het Joop Olieman-bestand.")
             
-            if base_key in df_pim.columns:
-                df_merged = pd.merge(df_merged, df_pim, on=base_key, how='left')
+            if standard_key in df_pim.columns:
+                df_merged = pd.merge(df_merged, df_pim, on=standard_key, how='left')
             else:
-                st.warning(f"Merge key '{base_key}' niet gevonden in het Pim K.I. Samen bestand.")
+                st.warning(f"Merge key '{standard_key}' niet gevonden in het Pim K.I. Samen-bestand.")
             
-            if base_key in df_prijs.columns:
-                df_merged = pd.merge(df_merged, df_prijs, on=base_key, how='left')
+            if standard_key in df_prijs.columns:
+                df_merged = pd.merge(df_merged, df_prijs, on=standard_key, how='left')
             else:
-                st.warning(f"Merge key '{base_key}' niet gevonden in het Prijslijst bestand.")
+                st.warning(f"Merge key '{standard_key}' niet gevonden in het Prijslijst-bestand.")
             
-            # Genereer een Excel bestand met de sheetnaam 'fokstieren'
+            # Genereer een Excelbestand met de sheetnaam 'fokstieren'
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
                 df_merged.to_excel(writer, sheet_name='fokstieren', index=False)
