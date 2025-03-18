@@ -12,16 +12,17 @@ Upload de volgende bestanden:
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 
 Na verwerking kun je via een multiselect aangeven welke stieren in de hoofd-export moeten komen.
-De overige stieren worden in een apart tabblad geplaatst.
+Je hebt daarnaast een aparte uploadoptie om in bulk een selectie aan te leveren via een Excel-bestand (met kolom "Stiernaam" of "Naam").
+De overige stieren komen in een apart tabblad.
 """)
 
-# Zorg dat de resultaten in de session state worden opgeslagen
+# Zorg dat we de uiteindelijke stierenkaart en mappingtabel in de session state bewaren
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
 if "df_mapping" not in st.session_state:
     st.session_state.df_mapping = None
 
-# Upload de vier bestanden voor de nieuwe merge
+# Upload de vier hoofdbestanden
 uploaded_crv = st.file_uploader("Upload Bronbestand CRV DEC2024.xlsx", type=["xlsx"], key="crv")
 uploaded_pim = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"], key="pim")
 uploaded_prijslijst = st.file_uploader("Upload Prijslijst.xlsx", type=["xlsx"], key="prijslijst")
@@ -34,7 +35,7 @@ def load_excel(file):
         st.error(f"Fout bij het laden van het bestand: {e}")
         return None
 
-# Verwerk de bestanden en sla het resultaat op in de session state
+# Verwerk de bestanden wanneer op de knop wordt gedrukt
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
         st.error("Zorg dat je alle vereiste bestanden uploadt!")
@@ -51,13 +52,12 @@ if st.button("Genereer Stierenkaart"):
             # Debug: toon kolomnamen van het PIM-bestand
             st.write("Kolommen in PIM bestand:", df_pim.columns.tolist())
             
-            # Normaliseer de KI-code in elk bestand
+            # Normaliseer de KI-code in elk bestand (hoofdletters en trimmen)
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
-            # Debug: toon een voorbeeld van de KI-codes
             st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
             st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
@@ -78,7 +78,6 @@ if st.button("Genereer Stierenkaart"):
             df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
-            # Debug: toon de kolomnamen in de merged dataframe
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
             # Definieer de mappingtabel (gebruik de exacte titels zoals in de bestanden)
@@ -178,33 +177,35 @@ if st.button("Genereer Stierenkaart"):
             st.session_state.df_stierenkaart = df_stierenkaart
             st.session_state.df_mapping = df_mapping
 
-# Indien een stierenkaart beschikbaar is, toon de selectie-opties
+# Als er een stierenkaart beschikbaar is, toon de selectie-opties
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_mapping = st.session_state.df_mapping
 
-    # Bepaal de opties op basis van de kolom "Stier"
+    # Bepaal de opties voor de multiselect op basis van de kolom "Stier"
     if "Stier" in df_stierenkaart.columns:
         options = sorted(df_stierenkaart["Stier"].dropna().unique().tolist())
     else:
         options = []
-    selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options)
-    st.write("Geselecteerde stieren:", selected_stieren)
     
-    # Nu: toon de basis Excel-uploadoptie pas als er één of meer stieren zijn geselecteerd
-    if selected_stieren:
-        uploaded_basis = st.file_uploader("Upload basis Excel met vorige stierenkaart (optioneel)", type=["xlsx"])
-        default_selected = []
-        if uploaded_basis is not None:
-            try:
-                df_basis = pd.read_excel(uploaded_basis)
-                if "Stier" in df_basis.columns:
-                    default_selected = sorted(df_basis["Stier"].dropna().unique().tolist())
-                    st.write("Standaardselectie uit basis Excel:", default_selected)
-                else:
-                    st.warning("De basis Excel bevat geen kolom 'Stier'.")
-            except Exception as e:
-                st.error("Fout bij het laden van de basis Excel: " + str(e))
+    # Extra uploadoptie voor bulk selectiebestand (met stiercode en naam)
+    bulk_file = st.file_uploader("Upload bulk selectie bestand met Stiercode en Naam", type=["xlsx"], key="bulk")
+    bulk_selected = []
+    if bulk_file is not None:
+        try:
+            df_bulk = pd.read_excel(bulk_file)
+            # Kijk of er een kolom 'Stiernaam' of 'Naam' aanwezig is
+            if "Stiernaam" in df_bulk.columns:
+                bulk_selected = sorted(df_bulk["Stiernaam"].dropna().unique().tolist())
+            elif "Naam" in df_bulk.columns:
+                bulk_selected = sorted(df_bulk["Naam"].dropna().unique().tolist())
+            st.write("Bulk selectie:", bulk_selected)
+        except Exception as e:
+            st.error("Fout bij het laden van het bulk selectie bestand: " + str(e))
+    
+    # Multiselect-widget met de standaard (bulk) selectie als default
+    selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options, default=bulk_selected)
+    st.write("Geselecteerde stieren:", selected_stieren)
     
     # Splits de data op basis van de selectie
     if selected_stieren:
@@ -214,7 +215,10 @@ if st.session_state.get("df_stierenkaart") is not None:
         df_selected = pd.DataFrame(columns=df_stierenkaart.columns)
         df_overig = df_stierenkaart.copy()
     
-    # Exporteer naar Excel met drie sheets: "Stierenkaart", "Overige stieren" en "Mapping"
+    # Exporteer naar één Excel-bestand met drie sheets:
+    #  - "Stierenkaart" voor de geselecteerde stieren
+    #  - "Overige stieren" voor de overige stieren
+    #  - "Mapping" met de mappingtabel
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
