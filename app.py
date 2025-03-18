@@ -7,7 +7,7 @@ st.title("Stierenkaart Generator")
 st.markdown("""
 Upload de volgende bestanden:
 - **Bronbestand CRV DEC2024.xlsx** (bevat kolommen zoals "KI-Code", "Vader", "M-vader", etc.)
-- **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code", PIM-data: PFW, aAa, Beta caseïne, Kappa caseïne)
+- **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data: PFW, aAa, Beta caseïne, Kappa caseïne)
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 """)
@@ -37,7 +37,7 @@ if st.button("Genereer Stierenkaart"):
         if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Er is een fout opgetreden bij het laden van een of meerdere bestanden.")
         else:
-            # Voeg een kolom 'KI_Code' toe aan het CRV‑bestand (gebaseerd op "KI-Code") en maak een temp_key in alle bestanden
+            # Voeg een kolom 'KI_Code' toe aan het CRV‑bestand en maak een temp_key in alle bestanden
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.strip()
             df_crv["temp_key"] = df_crv["KI_Code"]
             df_pim["temp_key"] = df_pim["Stiercode NL / KI code"].astype(str).str.strip()
@@ -52,14 +52,14 @@ if st.button("Genereer Stierenkaart"):
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
-            # De temp_key is niet meer nodig
+            # Voeg ook de KI_Code uit het CRV-bestand toe (voor later gebruik bij mapping)
+            df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
             # Debug: bekijk de kolomnamen in de merged dataframe
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Mappingtabel: hier geef je per rij aan welke originele kolom (Titel in bestand)
-            # moet komen te staan als welke kolom (Stierenkaart) en uit welke bron de data komt.
+            # Mappingtabel volgens jouw specificatie
             mapping_table = [
                 {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
@@ -119,7 +119,6 @@ if st.button("Genereer Stierenkaart"):
             ]
             
             final_data = {}
-            # Voor elke mapping halen we de data op:
             for mapping in mapping_table:
                 titel = mapping["Titel in bestand"]
                 std_naam = mapping["Stierenkaart"]
@@ -129,18 +128,20 @@ if st.button("Genereer Stierenkaart"):
                     # Probeer eerst direct uit df_merged
                     if titel in df_merged.columns and not df_merged[titel].isnull().all():
                         final_data[std_naam] = df_merged[titel]
-                    # Als niet, probeer kolom met suffix "_pim"
+                    # Of kijk naar de kolom met suffix "_pim"
                     elif (titel + "_pim") in df_merged.columns and not df_merged[titel + "_pim"].isnull().all():
                         final_data[std_naam] = df_merged[titel + "_pim"]
                     else:
-                        # Maak een mapping vanuit df_pim: indexeren op temp_key
-                        df_pim_temp = df_pim.copy()
-                        df_pim_temp["temp_key"] = df_pim_temp["Stiercode NL / KI code"].astype(str).str.strip()
-                        df_pim_temp.set_index("temp_key", inplace=True)
-                        # Gebruik de KI_Code uit df_crv (die ook in df_merged staat) om de PIM-waarde op te zoeken
-                        final_data[std_naam] = df_merged["KI_Code"].map(df_pim_temp[titel])
+                        # Controleer of de kolom in het PIM-bestand bestaat, anders laat leeg
+                        if titel in df_pim.columns:
+                            df_pim_temp = df_pim.copy()
+                            df_pim_temp["temp_key"] = df_pim_temp["Stiercode NL / KI code"].astype(str).str.strip()
+                            df_pim_temp.set_index("temp_key", inplace=True)
+                            final_data[std_naam] = df_merged["KI_Code"].map(df_pim_temp[titel])
+                        else:
+                            final_data[std_naam] = None
                 else:
-                    # Voor overige bronnen: eerst uit df_merged, zo niet, dan rechtstreeks uit de bron
+                    # Voor overige bronnen: eerst uit df_merged, zo niet dan rechtstreeks uit de bron
                     if titel in df_merged.columns and not df_merged[titel].isnull().all():
                         final_data[std_naam] = df_merged[titel]
                     elif bron == "Bronbestand CRV" and titel in df_crv.columns:
@@ -155,7 +156,7 @@ if st.button("Genereer Stierenkaart"):
             df_stierenkaart = pd.DataFrame(final_data)
             df_mapping = pd.DataFrame(mapping_table)
             
-            # Schrijf het eindbestand (twee sheets: 'Stierenkaart' en 'Mapping') naar Excel
+            # Schrijf beide dataframes naar één Excel-bestand met twee sheets
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
                 df_stierenkaart.to_excel(writer, sheet_name='Stierenkaart', index=False)
