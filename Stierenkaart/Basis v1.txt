@@ -10,8 +10,6 @@ Upload de volgende bestanden:
 - **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data: PFW, AAa code, Betacasine, Kappa-caseine)
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
-
-Na het verwerken kun je hieronder aangeven welke stieren in de hoofd-export moeten komen.
 """)
 
 # Bestanden uploaden
@@ -74,7 +72,7 @@ if st.button("Genereer Stierenkaart"):
             # Debug: bekijk de kolomnamen in de merged dataframe
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Definieer de mappingtabel met de exacte kolomnamen
+            # Definieer de mappingtabel met de aangepaste PIM-kolomnamen
             mapping_table = [
                 {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
@@ -133,7 +131,6 @@ if st.button("Genereer Stierenkaart"):
                 {"Titel in bestand": "Lvd",              "Stierenkaart": "levensduur",       "Waar te vinden": "Bronbestand CRV"}
             ]
             
-            # Bouw het eindresultaat op basis van de mappingtabel
             final_data = {}
             for mapping in mapping_table:
                 titel = mapping["Titel in bestand"]
@@ -171,31 +168,10 @@ if st.button("Genereer Stierenkaart"):
             df_stierenkaart = pd.DataFrame(final_data)
             df_mapping = pd.DataFrame(mapping_table)
             
-            # Nu: stel de gebruiker in staat te kiezen welke stieren (bulls) in de hoofd-export moeten komen.
-            # We gaan er hierbij vanuit dat de kolom "Stier" de stiernaam bevat.
-            if "Stier" in df_stierenkaart.columns:
-                options = sorted(df_stierenkaart["Stier"].dropna().unique().tolist())
-            else:
-                options = []
-            selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options)
-            
-            # Split de data op basis van de selectie
-            if selected_stieren:
-                df_selected = df_stierenkaart[df_stierenkaart["Stier"].isin(selected_stieren)]
-                df_overig = df_stierenkaart[~df_stierenkaart["Stier"].isin(selected_stieren)]
-            else:
-                # Als er niets geselecteerd is, neem dan alles mee in 'Overige stieren'
-                df_selected = pd.DataFrame(columns=df_stierenkaart.columns)
-                df_overig = df_stierenkaart.copy()
-            
-            # Schrijf de resultaten naar één Excel-bestand met drie sheets:
-            #  - "Stierenkaart" voor de geselecteerde stieren
-            #  - "Overige stieren" voor de overige stieren
-            #  - "Mapping" met de mappingtabel
+            # Schrijf beide dataframes naar één Excel-bestand met twee sheets
             output = io.BytesIO()
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
-                df_overig.to_excel(writer, sheet_name='Overige stieren', index=False)
+                df_stierenkaart.to_excel(writer, sheet_name='Stierenkaart', index=False)
                 df_mapping.to_excel(writer, sheet_name='Mapping', index=False)
             excel_data = output.getvalue()
             
