@@ -35,11 +35,11 @@ if st.button("Genereer Stierenkaart"):
         df_prijslijst = load_excel(uploaded_prijslijst)
         df_joop = load_excel(uploaded_joop)
 
-        if None in [df_crv, df_pim, df_prijslijst, df_joop]:
+        # Gebruik expliciete check op None
+        if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Er is een fout opgetreden bij het laden van een of meerdere bestanden.")
         else:
-            # Zorg dat de merge key in alle dataframes dezelfde naam heeft
-            # Hier wordt aangenomen dat de kolomnamen exact zo heten. Pas zonodig aan.
+            # Hernoem de kolommen zodat de merge key overal "KI_Code" heet
             df_crv.rename(columns={"KI-Code": "KI_Code"}, inplace=True)
             df_pim.rename(columns={"Stiercode NL / KI code": "KI_Code"}, inplace=True)
             df_prijslijst.rename(columns={"Artikelnr.": "KI_Code"}, inplace=True)
