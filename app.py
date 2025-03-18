@@ -12,10 +12,8 @@ uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xl
 uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')", type=["xlsx"])
 
 st.write("**Kolom overrides:**")
-# Geef handmatig de kolomnaam op als de automatische detectie faalt.
-# Voor Pim K.I. Samen is de standaard kolomnaam nu "Stiercode NL / KI code"
+# Override waarden voor de merge key in de bestanden waarin deze niet automatisch wordt herkend
 pim_override = st.text_input("Geef de kolomnaam in 'Pim K.I. Samen' voor KI-code", value="Stiercode NL / KI code")
-# Voor Prijslijst is de standaard kolomnaam nu "Artikelnr."
 prijs_override = st.text_input("Geef de kolomnaam in 'Prijslijst' voor KI-code", value="Artikelnr.")
 
 if st.button("Genereer Stierenkaart"):
@@ -29,7 +27,11 @@ if st.button("Genereer Stierenkaart"):
         df_pim = pd.read_excel(uploaded_pim)
         df_prijs = pd.read_excel(uploaded_prijs)
         
-        # Definieer de standaard merge key en mogelijke varianten (voor CRV en Joop)
+        # Strip eventuele witruimtes in de kolomnamen (voor alle bestanden)
+        for df in [df_crv, df_joop, df_pim, df_prijs]:
+            df.columns = df.columns.str.strip()
+        
+        # Definieer de standaard merge key (in de uiteindelijke output) en mogelijke varianten (voor CRV en Joop)
         standard_key = "KI-code"
         key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
         
@@ -62,7 +64,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
-        # Pim K.I. Samen-bestand: probeer automatisch de kolom te vinden
+        # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bijv. 'stiecode' of 'stiercode')
         pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
         found_key_pim = None
         for variant in pim_key_variants:
@@ -84,7 +86,7 @@ if st.button("Genereer Stierenkaart"):
                 st.error(f"Kolom '{pim_override}' niet gevonden in 'Pim K.I. Samen'.")
                 st.stop()
         
-        # Prijslijst-bestand: probeer automatisch de kolom te vinden
+        # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bijv. 'artikelnummer')
         prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
         found_key_prijs = None
         for variant in prijslijst_key_variants:
