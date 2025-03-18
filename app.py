@@ -75,9 +75,13 @@ if st.button("Genereer Stierenkaart"):
             df_prijs.rename(columns={"Artikelnr.": standard_key}, inplace=True)
             df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
         
-        # Indien in het CRV-bestand kolommen aanwezig zijn die we uit het Pim-bestand willen halen, verwijder ze zodat de merge niet de lege CRV-waarden behoudt
-        cols_to_override = ["PFW", "aAa", "beta caseïne", "kappa Caseïne"]
-        df_crv.drop(columns=cols_to_override, errors='ignore', inplace=True)
+        # Debug: toon aantal overeenkomende sleutels tussen CRV en Pim
+        match_count = len(set(df_crv[standard_key]) & set(df_pim[standard_key]))
+        st.write("Aantal overeenkomende sleutels tussen CRV en Pim:", match_count)
+        
+        # Verwijder (leeg) kolommen in het CRV-bestand zodat de data uit Pim niet overschreven wordt
+        cols_override = ["PFW", "aAa", "beta caseïne", "kappa Caseïne"]
+        df_crv.drop(columns=cols_override, errors='ignore', inplace=True)
         
         # Voeg de data samen op basis van de merge key (start met CRV als basis)
         df_merged = df_crv.copy()
