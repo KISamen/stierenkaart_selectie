@@ -30,7 +30,7 @@ if st.button("Genereer Stierenkaart"):
         standard_key = "KI-code"
         key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
         
-        # CRV-bestand: zoek naar een variant en hernoem naar de standaard key
+        # CRV-bestand: zoek naar een variant en hernoem naar standaard_key
         found_key = None
         for variant in key_variants:
             if variant in df_crv.columns:
@@ -74,6 +74,10 @@ if st.button("Genereer Stierenkaart"):
         else:
             df_prijs.rename(columns={"Artikelnr.": standard_key}, inplace=True)
             df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
+        
+        # Indien in het CRV-bestand kolommen aanwezig zijn die we uit het Pim-bestand willen halen, verwijder ze zodat de merge niet de lege CRV-waarden behoudt
+        cols_to_override = ["PFW", "aAa", "beta caseïne", "kappa Caseïne"]
+        df_crv.drop(columns=cols_to_override, errors='ignore', inplace=True)
         
         # Voeg de data samen op basis van de merge key (start met CRV als basis)
         df_merged = df_crv.copy()
