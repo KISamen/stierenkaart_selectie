@@ -12,11 +12,11 @@ Upload de volgende bestanden:
 - **Bronbestand Joop Olieman.xlsx** (kolom: "Kicode")
 
 Na verwerking kun je via een multiselect aangeven welke stieren in de hoofd-export moeten komen.
-Je hebt daarnaast een aparte uploadoptie om in bulk een selectie aan te leveren via een Excel-bestand (met kolom "Stiernaam" of "Naam").
+Daarnaast kun je in bulk een Excel-bestand uploaden met stiercode en naam, zodat de standaardselectie automatisch wordt ingevuld.
 De overige stieren komen in een apart tabblad.
 """)
 
-# Zorg dat we de uiteindelijke stierenkaart en mappingtabel in de session state bewaren
+# Zorg dat de resultaten in de session state worden opgeslagen
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
 if "df_mapping" not in st.session_state:
@@ -35,7 +35,7 @@ def load_excel(file):
         st.error(f"Fout bij het laden van het bestand: {e}")
         return None
 
-# Verwerk de bestanden wanneer op de knop wordt gedrukt
+# Verwerk de bestanden en sla het resultaat op in de session state
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
         st.error("Zorg dat je alle vereiste bestanden uploadt!")
@@ -52,7 +52,7 @@ if st.button("Genereer Stierenkaart"):
             # Debug: toon kolomnamen van het PIM-bestand
             st.write("Kolommen in PIM bestand:", df_pim.columns.tolist())
             
-            # Normaliseer de KI-code in elk bestand (hoofdletters en trimmen)
+            # Normaliseer de KI-code in elk bestand (zet in hoofdletters en verwijder spaties)
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
@@ -71,10 +71,11 @@ if st.button("Genereer Stierenkaart"):
             common_keys = set(df_crv["temp_key"]).intersection(set(df_pim["temp_key"]))
             st.write("Aantal gemeenschappelijke KI-codes tussen CRV en PIM:", len(common_keys))
             
-            # Merge de dataframes (CRV als basis, left join)
+            # Merge de dataframes: gebruik CRV als basis (left join)
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
+            # Voeg ook de KI_Code toe (gebaseerd op CRV) voor latere mapping
             df_merged["KI_Code"] = df_crv["KI_Code"]
             df_merged.drop(columns=["temp_key"], inplace=True)
             
@@ -177,7 +178,7 @@ if st.button("Genereer Stierenkaart"):
             st.session_state.df_stierenkaart = df_stierenkaart
             st.session_state.df_mapping = df_mapping
 
-# Als er een stierenkaart beschikbaar is, toon de selectie-opties
+# Als er een stierenkaart beschikbaar is, toon dan de selectie-opties
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_mapping = st.session_state.df_mapping
@@ -188,13 +189,14 @@ if st.session_state.get("df_stierenkaart") is not None:
     else:
         options = []
     
+    st.write("Beschikbare stieren:", options)
+    
     # Extra uploadoptie voor bulk selectiebestand (met stiercode en naam)
     bulk_file = st.file_uploader("Upload bulk selectie bestand met Stiercode en Naam", type=["xlsx"], key="bulk")
     bulk_selected = []
     if bulk_file is not None:
         try:
             df_bulk = pd.read_excel(bulk_file)
-            # Kijk of er een kolom 'Stiernaam' of 'Naam' aanwezig is
             if "Stiernaam" in df_bulk.columns:
                 bulk_selected = sorted(df_bulk["Stiernaam"].dropna().unique().tolist())
             elif "Naam" in df_bulk.columns:
@@ -203,7 +205,7 @@ if st.session_state.get("df_stierenkaart") is not None:
         except Exception as e:
             st.error("Fout bij het laden van het bulk selectie bestand: " + str(e))
     
-    # Multiselect-widget met de standaard (bulk) selectie als default
+    # Multiselect-widget met de standaard bulk selectie als default
     selected_stieren = st.multiselect("Selecteer de stieren die in de hoofd-export moeten komen:", options=options, default=bulk_selected)
     st.write("Geselecteerde stieren:", selected_stieren)
     
@@ -215,10 +217,7 @@ if st.session_state.get("df_stierenkaart") is not None:
         df_selected = pd.DataFrame(columns=df_stierenkaart.columns)
         df_overig = df_stierenkaart.copy()
     
-    # Exporteer naar één Excel-bestand met drie sheets:
-    #  - "Stierenkaart" voor de geselecteerde stieren
-    #  - "Overige stieren" voor de overige stieren
-    #  - "Mapping" met de mappingtabel
+    # Exporteer naar Excel met drie sheets: "Stierenkaart", "Overige stieren" en "Mapping"
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
