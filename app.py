@@ -12,8 +12,9 @@ uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xl
 uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')", type=["xlsx"])
 
 st.write("**Kolom overrides:**")
-# Override waarden voor de merge key in de bestanden waarin deze niet automatisch wordt herkend
+# Voor Pim K.I. Samen is de juiste merge key "Stiercode NL / KI code"
 pim_override = st.text_input("Geef de kolomnaam in 'Pim K.I. Samen' voor KI-code", value="Stiercode NL / KI code")
+# Voor Prijslijst is de juiste merge key nu "Artikelnr."
 prijs_override = st.text_input("Geef de kolomnaam in 'Prijslijst' voor KI-code", value="Artikelnr.")
 
 if st.button("Genereer Stierenkaart"):
@@ -31,11 +32,11 @@ if st.button("Genereer Stierenkaart"):
         for df in [df_crv, df_joop, df_pim, df_prijs]:
             df.columns = df.columns.str.strip()
         
-        # Definieer de standaard merge key (in de uiteindelijke output) en mogelijke varianten (voor CRV en Joop)
+        # Definieer de standaard merge key voor de uiteindelijke output
         standard_key = "KI-code"
         key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
         
-        # CRV-bestand: zoek naar een variant en hernoem naar de standaard key
+        # CRV-bestand: zoek naar een variant en hernoem naar standaard_key
         found_key = None
         for variant in key_variants:
             if variant in df_crv.columns:
@@ -64,7 +65,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
-        # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bijv. 'stiecode' of 'stiercode')
+        # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bv. 'stiecode' of 'stiercode')
         pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
         found_key_pim = None
         for variant in pim_key_variants:
@@ -78,7 +79,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode' of 'stiercode'.")
             st.info(f"Beschikbare kolommen in 'Pim K.I. Samen': {df_pim.columns.tolist()}")
-            # Probeer de override in te stellen
+            # Gebruik de override (standaard: "Stiercode NL / KI code")
             if pim_override in df_pim.columns:
                 df_pim.rename(columns={pim_override: standard_key}, inplace=True)
                 df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip()
@@ -86,7 +87,7 @@ if st.button("Genereer Stierenkaart"):
                 st.error(f"Kolom '{pim_override}' niet gevonden in 'Pim K.I. Samen'.")
                 st.stop()
         
-        # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bijv. 'artikelnummer')
+        # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bv. 'artikelnummer')
         prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
         found_key_prijs = None
         for variant in prijslijst_key_variants:
@@ -100,6 +101,7 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
             st.info(f"Beschikbare kolommen in 'Prijslijst': {df_prijs.columns.tolist()}")
+            # Gebruik de override (standaard: "Artikelnr.")
             if prijs_override in df_prijs.columns:
                 df_prijs.rename(columns={prijs_override: standard_key}, inplace=True)
                 df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip()
