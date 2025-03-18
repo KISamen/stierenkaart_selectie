@@ -2,126 +2,77 @@ import streamlit as st
 import pandas as pd
 import io
 
-# Titel van de app
-st.title("🐂 Stieren Data Selectie")
+st.title("Stierenkaart Generator")
+st.write("Upload de volgende bestanden om de stierenkaart te genereren:")
 
-# Upload een Excel-bestand
-uploaded_file = st.file_uploader("📂 Upload je Excel-bestand", type=["xlsx"])
+# Bestandsuploaders voor de verschillende bronbestanden
+uploaded_crv = st.file_uploader("Upload Bronbestand CRV (bijv. 'Bronbestand CRV DEC2024.xlsx')", type=["xlsx"])
+uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman (bijv. 'Bronbestand Joop Olieman.xlsx')", type=["xlsx"])
+uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xlsx')", type=["xlsx"])
+uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')", type=["xlsx"])
 
-# Controleer of er een bestand is geüpload
-if uploaded_file is not None:
-    try:
-        # Laad het Excel-bestand in een Pandas DataFrame, met rij 2 als kolomnamen
-        df = pd.read_excel(uploaded_file, engine="openpyxl", header=1)
+# Functie om de merge key te bepalen
+def bepaal_merge_key(df):
+    # Mogelijke kolommen om op te matchen
+    mogelijke_keys = ["KI-code", "levensnummer", "Stiernummer"]
+    for key in mogelijke_keys:
+        if key in df.columns:
+            return key
+    return None
 
-        # Laat een voorbeeld van de data zien
-        st.write("📊 **Voorbeeld van de data:**")
-        st.dataframe(df.head())
-
-        # **Stieren staan altijd in kolom C (index 2, want Python begint bij 0)**
-        stieren_kolom = df.columns[2]  # Kolom C vastzetten
-        ki_kolom = df.columns[1]  # Kolom B bevat de KI-code
-
-        # Haal unieke stierennamen op
-        stieren_namen = df[stieren_kolom].dropna().unique()
-
-        # Multiselectie van stierennamen
-        geselecteerde_stieren = st.multiselect("🐂 Selecteer de stieren", stieren_namen)
-
-        if geselecteerde_stieren:
-            # Filter de data op de geselecteerde stierennamen
-            gefilterde_data = df[df[stieren_kolom].isin(geselecteerde_stieren)]
-
-            # **Stap 1: Keuze tussen Drag & Drop en Canada Template**
-            optie = st.radio("📌 Kies een optie:", ["📂 Drag & Drop kolommen", "🇨🇦 Canada-template"])
-
-            if optie == "📂 Drag & Drop kolommen":
-                st.write("📌 **Sleep de kolommen in de gewenste volgorde:**")
-                kolommen = list(df.columns)
-                geselecteerde_kolommen = st.multiselect("📋 Kies kolommen", kolommen, default=kolommen)
+if st.button("Genereer Stierenkaart"):
+    if not (uploaded_crv and uploaded_joop and uploaded_pim and uploaded_prijs):
+        st.warning("Zorg dat alle bestanden zijn geüpload!")
+    else:
+        try:
+            # Lees de Excel-bestanden in (hier wordt ervan uitgegaan dat de relevante data in de eerste sheet staat)
+            df_crv = pd.read_excel(uploaded_crv)
+            df_joop = pd.read_excel(uploaded_joop)
+            df_pim = pd.read_excel(uploaded_pim)
+            df_prijs = pd.read_excel(uploaded_prijs)
             
+            # Bepaal de merge key vanuit het CRV-bestand als uitgangspunt
+            merge_key = bepaal_merge_key(df_crv)
+            if merge_key is None:
+                st.error("Geen geschikte merge key (bijv. 'KI-code' of 'levensnummer') gevonden in het CRV-bestand.")
             else:
-                # **Canada-template volgorde instellen (met correcte kolomnamen)**
-                canada_volgorde = {
-                    "Kicode": "KI Code",  # KI-code toegevoegd
-                    "Stiernaam": "Bull name",
-                    "Vader": "Father",  # Vader toegevoegd
-                    "Moeders Vader": "Maternal Grandfather",  # Moeders Vader toegevoegd
-                    "aAa": "aAa", "% Betr": "% reliability", "Kg melk": "kg milk",
-                    "% vet": "% fat", "% eiwit": "% protein", "Kg vet": "kg fat",
-                    "Kg eiwit": "kg protein", "Dcht totaal": "#Daughters", "% Betr.1": "% reliability",
-                    "Frame": "frame", "Uier": "udder", "Beenwerk": "feet & legs",
-                    "Totaal exterieur": "final score", "Hoogtemaat": "stature", "Voorhand": "chest width",
-                    "Inhoud": "body depth", "Openheid": "angularity", "Conditie score": "condition score",
-                    "Kruisligging": "rump angle", "Kruisbreedte": "rump width", "Beenstand achter": "rear legs rear view",
-                    "Beenstand zij": "rear leg set", "Klauwhoek": "foot angle", "Voorbeenstand": "front feet orientation",
-                    "Beengebruik": "mobility", "Vooruieraanhechting": "fore udder attachment", 
-                    "Voorspeenplaatsing": "front teat placement", "Speenlengte": "teat length",
-                    "Uierdiepte": "udder depth", "Achteruierhoogte": "rear udder height", "Ophangband": "central ligament",
-                    "Achterspeenplaatsing": "rear teat placement", "Uierbalans": "udder balance",
-                    "Geboortegemak": "calving ease", "Melksnelheid": "milking speed", "Celgetal": "somatic cell score",
-                    "Vruchtbaarheid": "female fertility", "Karakter": "temperament", 
-                    "Verwantschapsgraad": "maturity rate", "Persistentie": "persistence",
-                    "Klauwgezondheid": "hoof health"
-                }
+                st.write(f"Gebruik merge key: **{merge_key}**")
 
-                # Alleen kolommen gebruiken die in de dataset staan
-                geselecteerde_kolommen = [col for col in canada_volgorde.keys() if col in df.columns]
+                # Start met het CRV-bestand als basis en voeg de andere data eraan toe via een left-join
+                df_merged = df_crv.copy()
 
-                # **Stap 2: Uitklapbaar veld voor vertalingen**
-                vertalingen = {}
-                with st.expander("🌍 **Vertaling aanpassen**"):
-                    for col in geselecteerde_kolommen:
-                        vertalingen[col] = st.text_input(f"Vertaling voor '{col}':", value=canada_volgorde[col])
+                # Controleer of de merge key bestaat in de andere DataFrames, en voeg ze samen
+                if merge_key in df_joop.columns:
+                    df_merged = pd.merge(df_merged, df_joop, on=merge_key, how='left')
+                else:
+                    st.warning(f"Merge key '{merge_key}' niet gevonden in het Joop Olieman-bestand.")
 
-                # **Stap 3: Controle op dubbele namen en oplossen**
-                def maak_unieke_namen(naam_lijst):
-                    unieke_namen = {}
-                    nieuwe_namen = []
-                    for naam in naam_lijst:
-                        if naam in unieke_namen:
-                            unieke_namen[naam] += 1
-                            nieuwe_namen.append(f"{naam}_{unieke_namen[naam]}")
-                        else:
-                            unieke_namen[naam] = 0
-                            nieuwe_namen.append(naam)
-                    return nieuwe_namen
+                if merge_key in df_pim.columns:
+                    df_merged = pd.merge(df_merged, df_pim, on=merge_key, how='left')
+                else:
+                    st.warning(f"Merge key '{merge_key}' niet gevonden in het Pim K.I. Samen-bestand.")
 
-                # Pas de vertalingen toe en maak namen uniek indien nodig
-                nieuwe_kolomnamen = [vertalingen[col] for col in geselecteerde_kolommen]
-                unieke_kolomnamen = maak_unieke_namen(nieuwe_kolomnamen)
+                if merge_key in df_prijs.columns:
+                    df_merged = pd.merge(df_merged, df_prijs, on=merge_key, how='left')
+                else:
+                    st.warning(f"Merge key '{merge_key}' niet gevonden in het Prijslijst-bestand.")
 
-                # Hernoem de kolommen in de dataset
-                gefilterde_data = gefilterde_data[geselecteerde_kolommen]
-                gefilterde_data.columns = unieke_kolomnamen
+                # Hier kun je desgewenst kolommen hernoemen of de volgorde aanpassen volgens de mapping:
+                # Bijvoorbeeld: df_merged.rename(columns={'Stiernaam': 'Stier'}, inplace=True)
+                # Voeg hier de overige gewenste bewerkingen toe volgens jouw specificaties.
 
-            if geselecteerde_kolommen:
-                # **Sorteeropties op basis van kolomnamen**
-                sorteer_keuze = st.selectbox("🔽 Sorteer op kolom:", list(gefilterde_data.columns), index=0)
-
-                # **Sorteer de gefilterde data**
-                gesorteerde_data = gefilterde_data.sort_values(by=sorteer_keuze)
-
-                # **Laat de gesorteerde data zien**
-                st.write("✅ **Gesorteerde Data:**")
-                st.dataframe(gesorteerde_data)
-
-                # **Output als Excel (.xlsx)**
+                # Genereer de Excel als een in-memory bestand met de sheetnaam 'fokstieren'
                 output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    gesorteerde_data.to_excel(writer, index=False, sheet_name="Data")
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    df_merged.to_excel(writer, sheet_name='fokstieren', index=False)
                 output.seek(0)
 
-                # **Download-knop voor de Excel-output**
                 st.download_button(
-                    label="⬇️ Download Excel",
+                    label="Download Stierenkaart Excel",
                     data=output,
-                    file_name="gesorteerde_data.xlsx",
+                    file_name="stierenkaart.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
-
-    except Exception as e:
-        st.error(f"❌ Er is een fout opgetreden bij het verwerken van het bestand: {e}")
-
-else:
-    st.warning("⚠️ Upload een Excel-bestand om te beginnen.")
+                st.success("Stierenkaart succesvol gegenereerd!")
+        except Exception as e:
+            st.error(f"Er is een fout opgetreden: {e}")
