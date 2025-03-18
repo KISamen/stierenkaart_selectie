@@ -11,12 +11,6 @@ uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman (bijv. 'Bronbe
 uploaded_pim = st.file_uploader("Upload Pim K.I. Samen (bijv. 'Pim K.I. Samen.xlsx')", type=["xlsx"])
 uploaded_prijs = st.file_uploader("Upload Prijslijst (bijv. 'Prijslijst.xlsx')", type=["xlsx"])
 
-st.write("**Kolom overrides:**")
-# Voor Pim K.I. Samen is de juiste merge key "Stiercode NL / KI code"
-pim_override = st.text_input("Geef de kolomnaam in 'Pim K.I. Samen' voor KI-code", value="Stiercode NL / KI code")
-# Voor Prijslijst is de juiste merge key nu "Artikelnr."
-prijs_override = st.text_input("Geef de kolomnaam in 'Prijslijst' voor KI-code", value="Artikelnr.")
-
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_joop and uploaded_pim and uploaded_prijs):
         st.warning("Zorg dat alle bestanden zijn geüpload!")
@@ -28,7 +22,7 @@ if st.button("Genereer Stierenkaart"):
         df_pim = pd.read_excel(uploaded_pim)
         df_prijs = pd.read_excel(uploaded_prijs)
         
-        # Strip eventuele witruimtes in de kolomnamen (voor alle bestanden)
+        # Strip eventuele witruimtes in alle kolomnamen
         for df in [df_crv, df_joop, df_pim, df_prijs]:
             df.columns = df.columns.str.strip()
         
@@ -36,7 +30,7 @@ if st.button("Genereer Stierenkaart"):
         standard_key = "KI-code"
         key_variants = ["KI-code", "KI code", "KI-Code", "ki code"]
         
-        # CRV-bestand: zoek naar een variant en hernoem naar standaard_key
+        # CRV-bestand: zoek naar een variant en hernoem naar de standaard key
         found_key = None
         for variant in key_variants:
             if variant in df_crv.columns:
@@ -47,7 +41,7 @@ if st.button("Genereer Stierenkaart"):
             st.stop()
         if found_key != standard_key:
             df_crv.rename(columns={found_key: standard_key}, inplace=True)
-        # Zorg dat de merge key als string wordt behandeld en naar hoofdletters wordt omgezet
+        # Converteer merge key naar string, verwijder witruimtes en zet om naar hoofdletters
         df_crv[standard_key] = df_crv[standard_key].astype(str).str.strip().str.upper()
         
         st.write(f"Gebruik merge key: **{standard_key}**")
@@ -65,49 +59,21 @@ if st.button("Genereer Stierenkaart"):
         else:
             st.warning("In het Joop Olieman-bestand is geen merge key gevonden.")
         
-        # Pim K.I. Samen-bestand: zoek eerst naar varianten voor de merge key (bv. 'stiecode' of 'stiercode')
-        pim_key_variants = ["stiecode", "stiercode", "Stiecode", "Stiercode"]
-        found_key_pim = None
-        for variant in pim_key_variants:
-            if variant in df_pim.columns:
-                found_key_pim = variant
-                break
-        if found_key_pim:
-            if found_key_pim != standard_key:
-                df_pim.rename(columns={found_key_pim: standard_key}, inplace=True)
+        # Pim K.I. Samen-bestand: de merge key moet exact aanwezig zijn als "Stiercode NL / KI code"
+        if "Stiercode NL / KI code" not in df_pim.columns:
+            st.error("In het Pim K.I. Samen-bestand ontbreekt de kolom 'Stiercode NL / KI code'.")
+            st.stop()
+        else:
+            df_pim.rename(columns={"Stiercode NL / KI code": standard_key}, inplace=True)
             df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
-        else:
-            st.warning("In het Pim K.I. Samen-bestand ontbreekt de kolom 'stiecode' of 'stiercode'.")
-            st.info(f"Beschikbare kolommen in 'Pim K.I. Samen': {df_pim.columns.tolist()}")
-            # Gebruik de override (standaard: "Stiercode NL / KI code")
-            if pim_override in df_pim.columns:
-                df_pim.rename(columns={pim_override: standard_key}, inplace=True)
-                df_pim[standard_key] = df_pim[standard_key].astype(str).str.strip().str.upper()
-            else:
-                st.error(f"Kolom '{pim_override}' niet gevonden in 'Pim K.I. Samen'.")
-                st.stop()
         
-        # Prijslijst-bestand: zoek eerst naar varianten voor de merge key (bv. 'artikelnummer')
-        prijslijst_key_variants = ["artikelnummer", "Artikelnummer", "artikel nummer"]
-        found_key_prijs = None
-        for variant in prijslijst_key_variants:
-            if variant in df_prijs.columns:
-                found_key_prijs = variant
-                break
-        if found_key_prijs:
-            if found_key_prijs != standard_key:
-                df_prijs.rename(columns={found_key_prijs: standard_key}, inplace=True)
-            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
+        # Prijslijst-bestand: de merge key moet exact aanwezig zijn als "Artikelnr."
+        if "Artikelnr." not in df_prijs.columns:
+            st.error("In het Prijslijst-bestand ontbreekt de kolom 'Artikelnr.'.")
+            st.stop()
         else:
-            st.warning("In het Prijslijst-bestand ontbreekt de kolom 'artikelnummer'.")
-            st.info(f"Beschikbare kolommen in 'Prijslijst': {df_prijs.columns.tolist()}")
-            # Gebruik de override (standaard: "Artikelnr.")
-            if prijs_override in df_prijs.columns:
-                df_prijs.rename(columns={prijs_override: standard_key}, inplace=True)
-                df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
-            else:
-                st.error(f"Kolom '{prijs_override}' niet gevonden in 'Prijslijst'.")
-                st.stop()
+            df_prijs.rename(columns={"Artikelnr.": standard_key}, inplace=True)
+            df_prijs[standard_key] = df_prijs[standard_key].astype(str).str.strip().str.upper()
         
         # Voeg de data samen op basis van de merge key (start met CRV als basis)
         df_merged = df_crv.copy()
