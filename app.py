@@ -11,10 +11,11 @@ Upload de volgende bestanden:
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
 - **Bronbestand Joop Olieman.xlsx** (bevat onder andere de kolom "Kicode")
 
-Na verwerking kun je stieren selecteren voor de hoofd-export.
-Je kunt een bulk-selectiebestand uploaden met stiergegevens.  
-Belangrijk: in dit bulkbestand moet de stier worden gematcht op basis van de KI-code (kolom A) – niet op de naam.
-Als de bulkfile geen KI-code bevat, wordt er gekeken naar "Stier", "Stiernaam" of "Naam".
+**Bulk-selectie:**  
+Je kunt daarnaast een Excelbestand uploaden waarin in kolom A de KI-code staat (bijv. 782666).  
+De KI-codes uit dit bestand worden gebruikt om de bijbehorende stieren (bulls) uit de data te matchen.  
+  
+De uiteindelijke selectie is de combinatie (unie) van de KI-codes uit de bulkfile en extra handmatig geselecteerde bullcodes.  
 Ontbrekende data blijft leeg in de export.
 """)
 
@@ -35,8 +36,7 @@ uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["
 def load_excel(file):
     try:
         df = pd.read_excel(file)
-        # Zorg dat kolomnamen geen overbodige spaties bevatten
-        df.columns = df.columns.str.strip()
+        df.columns = df.columns.str.strip()  # verwijder overbodige spaties
         return df
     except Exception as e:
         st.error(f"Fout bij het laden van het bestand: {e}")
@@ -89,7 +89,6 @@ if st.button("Genereer Stierenkaart"):
                 {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
-                # Gebruik "Stiernaam" als eerste keuze, met fallback op "Stier"
                 {"Titel in bestand": "Stiernaam",        "Stierenkaart": "Stier",               "Waar te vinden": ""},
                 {"Titel in bestand": "Erf-fact",         "Stierenkaart": "Erf-fact",            "Waar te vinden": ""},
                 {"Titel in bestand": "Vader",            "Stierenkaart": "Afstamming V",        "Waar te vinden": "Bronbestand CRV"},
@@ -186,6 +185,10 @@ if st.button("Genereer Stierenkaart"):
             # Normaliseer de bullnamen in de output zodat ze consistent zijn
             if "Stier" in df_stierenkaart.columns:
                 df_stierenkaart["Stier"] = df_stierenkaart["Stier"].astype(str).str.strip().str.upper()
+            # Zorg er ook voor dat de KI-code kolom in de output consistent is (als deze wordt gebruikt voor matching)
+            if "KI-code" not in df_stierenkaart.columns and "KI-code" in df_stierenkaart.columns:
+                # Niet nodig, maar voorbeeld...
+                df_stierenkaart["KI-code"] = df_stierenkaart["KI-code"].astype(str).str.strip().str.upper()
             
             st.session_state.df_stierenkaart = df_stierenkaart
             st.session_state.df_mapping = df_mapping
@@ -195,55 +198,53 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_mapping = st.session_state.df_mapping
 
-    # Bepaal de beschikbare stiernamen uit de kolom "Stier"
-    if "Stier" in df_stierenkaart.columns:
-        options = sorted(df_stierenkaart["Stier"].dropna().unique().tolist())
+    # Maak een "Display" kolom voor de handmatige selectie: "KI-code - Stier"
+    if "KI-code" in df_stierenkaart.columns:
+        df_stierenkaart["Display"] = df_stierenkaart["KI-code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
     else:
-        options = []
-    st.write("Beschikbare stieren:", options)
+        # Als "KI-code" niet bestaat, neem dan "KI_Code" (afhankelijk van de mapping)
+        df_stierenkaart["Display"] = df_stierenkaart["KI_Code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
+    
+    # Gebruik de "Display" kolom als opties voor de handmatige selectie
+    options = sorted(df_stierenkaart["Display"].dropna().unique().tolist())
+    st.write("Beschikbare bull-opties (KI-code - Stier):", options)
     
     # Extra uploadoptie voor bulk-selectiebestand
-    bulk_file = st.file_uploader("Upload bulk selectie bestand met KI-code (kolom A) en/of Stiernaam", type=["xlsx"], key="bulk")
-    bulk_selected = []
+    bulk_file = st.file_uploader("Upload bulk selectie bestand (met KI-code in kolom A)", type=["xlsx"], key="bulk")
+    bulk_selected_codes = []
     if bulk_file is not None:
         try:
             df_bulk = pd.read_excel(bulk_file)
             df_bulk.columns = df_bulk.columns.str.strip()
-            # Eerst: als er een kolom "KI-code" of "KI_Code" aanwezig is, gebruiken we deze
-            if "KI-code" in df_bulk.columns or "KI_Code" in df_bulk.columns:
-                if "KI-code" in df_bulk.columns:
-                    bulk_codes = sorted(df_bulk["KI-code"].dropna().astype(str).str.upper().str.strip().unique().tolist())
-                else:
-                    bulk_codes = sorted(df_bulk["KI_Code"].dropna().astype(str).str.upper().str.strip().unique().tolist())
-                # Gebruik de KI-code uit de gegenereerde stierenkaart (we gaan ervan uit dat de outputkolom "KI-code" bestaat)
-                # En haal de bijbehorende stiernamen op uit de kolom "Stier"
-                bulk_selected = sorted(df_stierenkaart.loc[df_stierenkaart["KI-code"].isin(bulk_codes), "Stier"].unique().tolist())
-            # Als er geen KI-code kolom is, probeer dan de kolom "Stier" of "Stiernaam" of "Naam"
-            elif "Stier" in df_bulk.columns:
-                bulk_selected = sorted(df_bulk["Stier"].dropna().astype(str).str.upper().str.strip().unique().tolist())
-            elif "Stiernaam" in df_bulk.columns:
-                bulk_selected = sorted(df_bulk["Stiernaam"].dropna().astype(str).str.upper().str.strip().unique().tolist())
-            elif "Naam" in df_bulk.columns:
-                bulk_selected = sorted(df_bulk["Naam"].dropna().astype(str).str.upper().str.strip().unique().tolist())
-            st.session_state.bulk_selected = bulk_selected
-            st.write("Bulk selectie (uit bestand):", bulk_selected)
+            # Veronderstel dat de KI-code in kolom A staat; gebruik de eerste kolom
+            bulk_codes = df_bulk.iloc[:, 0].dropna().astype(str).str.upper().str.strip().unique().tolist()
+            bulk_selected_codes = sorted(bulk_codes)
+            st.session_state.bulk_selected = bulk_selected_codes
+            st.write("Bulk selectie (KI-codes uit bestand):", bulk_selected_codes)
         except Exception as e:
             st.error("Fout bij het laden van het bulk selectie bestand: " + str(e))
     else:
-        if "bulk_selected" in st.session_state:
-            bulk_selected = st.session_state.bulk_selected
-
-    # Handmatige selectie (zonder vooraf ingevulde defaults)
-    manual_selected = st.multiselect("Voeg extra stieren toe (handmatige selectie):", options=options, default=[])
-    st.write("Handmatig geselecteerde stieren:", manual_selected)
+        bulk_selected_codes = st.session_state.get("bulk_selected", [])
     
-    # Combineer de bulk en handmatige selectie (unie)
-    final_selected = sorted(set(bulk_selected).union(set(manual_selected)))
-    st.write("Gecombineerde selectie:", final_selected)
+    # Handmatige selectie: laat de gebruiker bull-opties (display strings) selecteren
+    manual_selected_display = st.multiselect("Voeg extra stieren toe (handmatige selectie):", options=options, default=[])
+    # Extraheer bullcodes uit de handmatige selectie (verondersteld dat het formaat is "KI-code - Stier")
+    manual_selected_codes = [item.split(" - ")[0] for item in manual_selected_display]
+    st.write("Handmatig geselecteerde KI-codes:", manual_selected_codes)
     
-    # Filter de DataFrame op basis van de gecombineerde selectie
-    df_selected = df_stierenkaart[df_stierenkaart["Stier"].isin(final_selected)]
-    df_overig = df_stierenkaart[~df_stierenkaart["Stier"].isin(final_selected)]
+    # Combineer de bulk KI-codes en de handmatige KI-codes
+    final_selected_codes = sorted(set(bulk_selected_codes).union(set(manual_selected_codes)))
+    st.write("Gecombineerde KI-code selectie:", final_selected_codes)
+    
+    # Filter de DataFrame op basis van de gecombineerde KI-codes.
+    # We gaan ervan uit dat de bullcode in de output in kolom "KI-code" staat.
+    if "KI-code" in df_stierenkaart.columns:
+        df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
+        df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
+    else:
+        # Indien niet, probeer "KI_Code"
+        df_selected = df_stierenkaart[df_stierenkaart["KI_Code"].isin(final_selected_codes)]
+        df_overig = df_stierenkaart[~df_stierenkaart["KI_Code"].isin(final_selected_codes)]
     
     # Exporteer naar Excel met drie sheets: "Stierenkaart", "Overige stieren" en "Mapping"
     output = io.BytesIO()
