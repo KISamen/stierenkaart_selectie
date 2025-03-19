@@ -1,4 +1,4 @@
-import streamlit as st
+import streamlit as st 
 import pandas as pd
 import io
 
@@ -108,7 +108,7 @@ if st.button("Genereer Stierenkaart"):
                 {"Titel in bestand": "KH",               "Stierenkaart": "klauwhoek",         "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "VB",               "Stierenkaart": "voorbeenstand",     "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "BG",               "Stierenkaart": "beengebruik",       "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "VA",               "Stierenkaart": "vooruieraanhechting","Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "VA",               "Stierenkaart": "vooruieraanhechting", "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "VP",               "Stierenkaart": "voorspeenplaatsing", "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "SL",               "Stierenkaart": "speenlengte",       "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "UD",               "Stierenkaart": "uierdiepte",        "Waar te vinden": "Bronbestand CRV"},
@@ -126,11 +126,21 @@ if st.button("Genereer Stierenkaart"):
                 {"Titel in bestand": "Lvd",              "Stierenkaart": "levensduur",       "Waar te vinden": "Bronbestand CRV"}
             ]
 
-            final_data = {}
+            # Vervangen van het stuk voor final_data
+            final_data = {} 
             for mapping in mapping_table:
                 titel = mapping["Titel in bestand"]
                 std_naam = mapping["Stierenkaart"]
-                final_data[std_naam] = df_merged.get(titel, "")
+
+                # Specifieke behandeling voor PIM-data
+                if mapping["Waar te vinden"] == "PIM K.I. SAMEN":
+                    if titel in df_pim.columns:
+                        df_pim_temp = df_pim.set_index("KI_Code")
+                        final_data[std_naam] = df_merged["KI_Code"].map(df_pim_temp[titel])
+                    else:
+                        final_data[std_naam] = ""
+                else:
+                    final_data[std_naam] = df_merged.get(titel, "")
 
             df_stierenkaart = pd.DataFrame(final_data)
             df_stierenkaart.fillna("", inplace=True)
