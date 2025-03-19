@@ -12,10 +12,10 @@ Upload de volgende bestanden:
 - **Bronbestand Joop Olieman.xlsx** (bevat onder andere de kolom "Kicode")
 
 **Bulk-selectie:**  
-Je kunt daarnaast een Excelbestand uploaden waarin in kolom A de KI-code staat (bijv. 782666).  
-De KI-codes uit dit bestand worden gebruikt om de bijbehorende stieren (bulls) uit de data te matchen.  
-  
-De uiteindelijke selectie is de combinatie (unie) van de KI-codes uit de bulkfile en extra handmatig geselecteerde bullcodes.  
+Je kunt daarnaast een Excelbestand uploaden waarin in kolom A de KI‑code staat (bijv. 782666).  
+De KI‑codes uit dit bestand worden gebruikt om de bijbehorende bullnamen (Stier) uit de data op te zoeken.
+
+De uiteindelijke selectie is de combinatie (unie) van KI‑codes uit de bulkfile en extra handmatig geselecteerde KI‑codes.
 Ontbrekende data blijft leeg in de export.
 """)
 
@@ -66,7 +66,7 @@ if st.button("Genereer Stierenkaart"):
             st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
             st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
-            # Maak een tijdelijke merge-sleutel in alle bestanden
+            # Maak een tijdelijke merge-sleutel
             df_crv["temp_key"] = df_crv["KI_Code"]
             df_pim["temp_key"] = df_pim["KI_Code"]
             df_prijslijst["temp_key"] = df_prijslijst["KI_Code"]
@@ -84,9 +84,9 @@ if st.button("Genereer Stierenkaart"):
             
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Definieer de mappingtabel
+            # Pas de mappingtabel aan: let op de eerste rij: gebruik "KI_Code" (zonder streepje)
             mapping_table = [
-                {"Titel in bestand": "KI-Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
+                {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernaam",        "Stierenkaart": "Stier",               "Waar te vinden": ""},
@@ -185,10 +185,6 @@ if st.button("Genereer Stierenkaart"):
             # Normaliseer de bullnamen in de output zodat ze consistent zijn
             if "Stier" in df_stierenkaart.columns:
                 df_stierenkaart["Stier"] = df_stierenkaart["Stier"].astype(str).str.strip().str.upper()
-            # Zorg er ook voor dat de KI-code kolom in de output consistent is (als deze wordt gebruikt voor matching)
-            if "KI-code" not in df_stierenkaart.columns and "KI-code" in df_stierenkaart.columns:
-                # Niet nodig, maar voorbeeld...
-                df_stierenkaart["KI-code"] = df_stierenkaart["KI-code"].astype(str).str.strip().str.upper()
             
             st.session_state.df_stierenkaart = df_stierenkaart
             st.session_state.df_mapping = df_mapping
@@ -202,14 +198,13 @@ if st.session_state.get("df_stierenkaart") is not None:
     if "KI-code" in df_stierenkaart.columns:
         df_stierenkaart["Display"] = df_stierenkaart["KI-code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
     else:
-        # Als "KI-code" niet bestaat, neem dan "KI_Code" (afhankelijk van de mapping)
         df_stierenkaart["Display"] = df_stierenkaart["KI_Code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
     
-    # Gebruik de "Display" kolom als opties voor de handmatige selectie
+    # Gebruik de "Display" kolom als opties voor handmatige selectie
     options = sorted(df_stierenkaart["Display"].dropna().unique().tolist())
     st.write("Beschikbare bull-opties (KI-code - Stier):", options)
     
-    # Extra uploadoptie voor bulk-selectiebestand
+    # Uploadoptie voor bulk-selectiebestand (met KI-code in kolom A)
     bulk_file = st.file_uploader("Upload bulk selectie bestand (met KI-code in kolom A)", type=["xlsx"], key="bulk")
     bulk_selected_codes = []
     if bulk_file is not None:
@@ -228,7 +223,7 @@ if st.session_state.get("df_stierenkaart") is not None:
     
     # Handmatige selectie: laat de gebruiker bull-opties (display strings) selecteren
     manual_selected_display = st.multiselect("Voeg extra stieren toe (handmatige selectie):", options=options, default=[])
-    # Extraheer bullcodes uit de handmatige selectie (verondersteld dat het formaat is "KI-code - Stier")
+    # Extraheer bullcodes uit de handmatige selectie (het gedeelte voor ' - ')
     manual_selected_codes = [item.split(" - ")[0] for item in manual_selected_display]
     st.write("Handmatig geselecteerde KI-codes:", manual_selected_codes)
     
@@ -236,13 +231,11 @@ if st.session_state.get("df_stierenkaart") is not None:
     final_selected_codes = sorted(set(bulk_selected_codes).union(set(manual_selected_codes)))
     st.write("Gecombineerde KI-code selectie:", final_selected_codes)
     
-    # Filter de DataFrame op basis van de gecombineerde KI-codes.
-    # We gaan ervan uit dat de bullcode in de output in kolom "KI-code" staat.
+    # Filter de DataFrame op basis van de gecombineerde KI-codes
     if "KI-code" in df_stierenkaart.columns:
         df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
         df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
     else:
-        # Indien niet, probeer "KI_Code"
         df_selected = df_stierenkaart[df_stierenkaart["KI_Code"].isin(final_selected_codes)]
         df_overig = df_stierenkaart[~df_stierenkaart["KI_Code"].isin(final_selected_codes)]
     
