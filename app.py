@@ -54,7 +54,7 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
-            # In het PIM-bestand: hernoem de kolom "PFW code" (case-insensitief) naar "PFW_pim"
+            # In het PIM-bestand: hernoem de kolom "PFW code" naar "PFW_pim"
             pfw_col = None
             for col in df_pim.columns:
                 if col.lower() == "pfw code":
@@ -66,7 +66,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
             
-            # In het Joop-bestand: zoek naar de TIP-kolom
+            # In het Joop-bestand: zoek naar de TIP-kolom en hernoem naar "TIP"
             tip_col = None
             for col in df_joop.columns:
                 if col.strip().upper() == "TIP":
@@ -84,11 +84,11 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
             
-            # Voeg een tijdelijke key toe (op basis van KI_Code) voor de merge
+            # Voeg een tijdelijke key toe voor de merge
             for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df_temp["temp_key"] = df_temp["KI_Code"]
             
-            # Voer de merges uit
+            # Merge de dataframes op de tijdelijke key
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -104,7 +104,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Debug: Voorbeeld data PFW_pim:", df_merged[["KI_Code", "PFW_pim"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Definieer de mapping-tabel (pas indien nodig kolomnamen aan)
+            # Mapping-tabel: haal de gewenste kolommen op en hernoem ze
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",     "Stierenkaart": "Stiernummer",       "Waar te vinden": ""},
@@ -141,52 +141,56 @@ if st.button("Genereer Stierenkaart"):
             
             st.session_state.df_stierenkaart = df_stierenkaart
 
-# SELECTIE UI met groepering per Ras
+# SELECTIE UI
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
 
     # Maak een Display-kolom in de vorm "KI-code - Stier"
     df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
-
+    mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
+    
+    # Basis: algemene selectie
+    basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()))
+    
     # Bulk-selectie (optioneel)
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     bulk_selected_codes = []
     if bulk_file:
         df_bulk = pd.read_excel(bulk_file)
         bulk_selected_codes = df_bulk.iloc[:, 0].astype(str).str.upper().str.strip().tolist()
-
-    # Groepeer de Display-opties per Ras
-    grouped_options = {}
-    for _, row in df_stierenkaart.iterrows():
-        breed = row["Ras"]
-        display = row["Display"]
-        if breed not in grouped_options:
-            grouped_options[breed] = []
-        grouped_options[breed].append(display)
-    # Verwijder dubbele waarden en sorteer elke groep
-    for breed in grouped_options:
-        grouped_options[breed] = sorted(list(set(grouped_options[breed])))
-
-    # Definieer een custom order voor de rassen:
-    order_map = {
-        "Holstein zwartbont": 1,
-        "Red holstein": 2
-    }
-    # Sorteer de rassen: eerst de rassen uit order_map, dan de overige
-    sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
     
-    st.markdown("### Selectie per ras")
-    selected_displays = []
-    for breed in sorted_breeds:
-        st.markdown(f"**{breed}**")
-        sel = st.multiselect(f"Selecteer stieren ({breed})", options=grouped_options[breed], key=f"ms_{breed}")
-        selected_displays.extend(sel)
+    # Expander voor selectie per Ras
+    with st.expander("Selecteer per ras"):
+        # Groepeer de Display-opties per Ras
+        grouped_options = {}
+        for _, row in df_stierenkaart.iterrows():
+            breed = row["Ras"]
+            display = row["Display"]
+            if breed not in grouped_options:
+                grouped_options[breed] = []
+            grouped_options[breed].append(display)
+        # Verwijder dubbele waarden en sorteer elke groep
+        for breed in grouped_options:
+            grouped_options[breed] = sorted(list(set(grouped_options[breed])))
     
-    # Combineer de gemaakte selectie met de bulk-selectie
-    manual_selected_codes = [item.split(" - ")[0] for item in selected_displays]
+        # Definieer een custom order voor de rassen:
+        order_map = {
+            "Holstein zwartbont": 1,
+            "Red holstein": 2
+        }
+        sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
+    
+        st.markdown("### Selectie per ras")
+        per_ras_selection = []
+        for breed in sorted_breeds:
+            st.markdown(f"**{breed}**")
+            sel = st.multiselect(f"Selecteer stieren ({breed})", options=grouped_options[breed], key=f"ms_{breed}")
+            per_ras_selection.extend(sel)
+    
+    # Combineer de keuzes uit de algemene selectie en de per-ras selectie
+    manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
     combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
-    mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
-    valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code) is not None]
+    valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
     
     # Optioneel: een gecombineerde multiselect
     final_combined_display = st.multiselect("Gecombineerde selectie:", options=list(mapping_dict.values()), default=valid_final_display)
