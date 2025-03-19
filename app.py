@@ -3,7 +3,6 @@ import pandas as pd
 import io
 
 st.set_page_config(layout="wide")
-
 st.title("Stierenkaart Generator")
 
 st.markdown("""
@@ -55,11 +54,21 @@ if st.button("Genereer Stierenkaart"):
             # Normaliseer KI-codes
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
-            # Hernoem de PFW kolom (titel in pimbestand is "PFW code")
-            if "PFW code" in df_pim.columns:
-                df_pim.rename(columns={"PFW code": "PFW_pim"}, inplace=True)
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
+
+            # Zoek case-onafhankelijk naar de kolom "PFW code" en hernoem deze naar "PFW_pim"
+            pfw_col = None
+            for col in df_pim.columns:
+                if col.lower() == "pfw code":
+                    pfw_col = col
+                    break
+            if pfw_col:
+                df_pim.rename(columns={pfw_col: "PFW_pim"}, inplace=True)
+                # Converteer de PFW_pim kolom expliciet naar string en strip spaties
+                df_pim["PFW_pim"] = df_pim["PFW_pim"].astype(str).str.strip()
+            else:
+                st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
 
             # Voeg een tijdelijke key toe voor de merges
             for df in [df_crv, df_pim, df_prijslijst, df_joop]:
@@ -70,10 +79,18 @@ if st.button("Genereer Stierenkaart"):
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
 
+            # Indien CRV de KI_Code kolom bevat, zorg ervoor dat deze wordt behouden
             if "KI_Code" in df_crv.columns:
                 df_merged["KI_Code"] = df_crv["KI_Code"]
             else:
                 st.error("Kolom 'KI_Code' ontbreekt in CRV-bestand.")
+
+            if debug_mode:
+                st.write("Debug: Kolommen in df_merged", df_merged.columns.tolist())
+                if "PFW_pim" in df_merged.columns:
+                    st.write("Debug: Voorbeeld data PFW_pim", df_merged[["KI_Code", "PFW_pim"]].head())
+                else:
+                    st.write("Debug: 'PFW_pim' kolom ontbreekt in df_merged.")
 
             # Definieer de mapping-tabel; let op de aanpassing voor de PFW kolom
             mapping_table = [
