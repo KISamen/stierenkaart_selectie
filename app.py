@@ -25,10 +25,6 @@ debug_mode = st.checkbox("Activeer debug", value=False)
 
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
-if "df_mapping" not in st.session_state:
-    st.session_state.df_mapping = None
-if "bulk_selected" not in st.session_state:
-    st.session_state.bulk_selected = []
 
 def load_excel(file):
     try:
@@ -55,9 +51,13 @@ if st.button("Genereer Stierenkaart"):
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
+            # Gebruik kolom "Kicode" uit het Joop-bestand als mergekey
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
-
-            # Zoek case-onafhankelijk naar de kolom "PFW code" en hernoem deze naar "PFW_pim"
+            
+            if debug_mode:
+                st.write("Debug: Kolommen in Bronbestand Joop Olieman:", df_joop.columns.tolist())
+            
+            # Voor het PIM-bestand: zoek case-onafhankelijk naar "PFW code" en hernoem naar "PFW_pim"
             pfw_col = None
             for col in df_pim.columns:
                 if col.lower() == "pfw code":
@@ -65,34 +65,57 @@ if st.button("Genereer Stierenkaart"):
                     break
             if pfw_col:
                 df_pim.rename(columns={pfw_col: "PFW_pim"}, inplace=True)
-                # Converteer de PFW_pim kolom expliciet naar string en strip spaties
                 df_pim["PFW_pim"] = df_pim["PFW_pim"].astype(str).str.strip()
             else:
                 st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
-
+            
+            # Voor het Joop-bestand: zoek naar de TIP-kolom
+            tip_col = None
+            for col in df_joop.columns:
+                # Eerst zoeken naar een exacte match na stripping
+                if col.strip().upper() == "TIP":
+                    tip_col = col
+                    break
+            if not tip_col:
+                # Indien geen exacte match, zoek naar een kolom waarin "tip" voorkomt (case-insensitief)
+                for col in df_joop.columns:
+                    if "tip" in col.strip().lower():
+                        tip_col = col
+                        break
+            if tip_col:
+                if tip_col != "TIP":
+                    df_joop.rename(columns={tip_col: "TIP"}, inplace=True)
+                df_joop["TIP"] = df_joop["TIP"].astype(str).str.strip()
+            else:
+                st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
+            
             # Voeg een tijdelijke key toe voor de merges
             for df in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df["temp_key"] = df["KI_Code"]
 
-            # Merge de dataframes
+            # Merge de dataframes op de tijdelijke key
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
 
-            # Indien CRV de KI_Code kolom bevat, zorg ervoor dat deze wordt behouden
+            # Zorg dat de KI_Code van het CRV-bestand behouden blijft
             if "KI_Code" in df_crv.columns:
                 df_merged["KI_Code"] = df_crv["KI_Code"]
             else:
                 st.error("Kolom 'KI_Code' ontbreekt in CRV-bestand.")
 
             if debug_mode:
-                st.write("Debug: Kolommen in df_merged", df_merged.columns.tolist())
+                st.write("Debug: Kolommen in df_merged:", df_merged.columns.tolist())
                 if "PFW_pim" in df_merged.columns:
-                    st.write("Debug: Voorbeeld data PFW_pim", df_merged[["KI_Code", "PFW_pim"]].head())
+                    st.write("Debug: Voorbeeld data PFW_pim:", df_merged[["KI_Code", "PFW_pim"]].head())
                 else:
                     st.write("Debug: 'PFW_pim' kolom ontbreekt in df_merged.")
+                if "TIP" in df_merged.columns:
+                    st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
+                else:
+                    st.write("Debug: 'TIP' kolom ontbreekt in df_merged.")
 
-            # Definieer de mapping-tabel; let op de aanpassing voor de PFW kolom
+            # Definieer de mapping-tabel (zorg dat de kolomtitel "TIP" uit het Joop-bestand correct wordt meegenomen)
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
@@ -169,7 +192,6 @@ if st.session_state.get("df_stierenkaart") is not None:
 
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     bulk_selected_codes = []
-
     if bulk_file:
         df_bulk = pd.read_excel(bulk_file)
         bulk_selected_codes = df_bulk.iloc[:, 0].astype(str).str.upper().str.strip().tolist()
