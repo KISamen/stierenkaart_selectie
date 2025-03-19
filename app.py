@@ -14,17 +14,20 @@ st.markdown("""
 - **Bronbestand Joop Olieman.xlsx** (bevat onder andere de kolom "Kicode")
 
 **Bulk-selectie:**  
-Je kunt een Excelbestand uploaden waarin in kolom A de KI‑code staat (bijv. 782666). Deze KI‑codes worden gebruikt om de bijbehorende bullgegevens (Stier) op te zoeken.
+Je kunt daarnaast een Excelbestand uploaden waarin in kolom A de KI‑code staat (bijv. 782666).  
+Deze KI‑codes worden gebruikt om de bijbehorende bullgegevens (Stier) op te zoeken.
 
-De uiteindelijke selectie is de combinatie (unie) van KI‑codes uit de bulkfile en extra handmatig geselecteerde KI‑codes. Ontbrekende data blijft leeg in de export.
+De uiteindelijke selectie is de combinatie (unie) van KI‑codes uit de bulkfile en extra handmatig geselecteerde KI‑codes.  
+Ontbrekende data blijft leeg in de export.
 """)
 
-# Upload de vier bestanden (verticale layout)
+# Alle uploadknoppen komen in één verticale layout
 uploaded_crv = st.file_uploader("Upload Bronbestand CRV DEC2024.xlsx", type=["xlsx"], key="crv")
 uploaded_pim = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"], key="pim")
 uploaded_prijslijst = st.file_uploader("Upload Prijslijst.xlsx", type=["xlsx"], key="prijslijst")
 uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
 
+# Debug-optie
 debug_mode = st.checkbox("Activeer debug", value=False)
 
 # Functie om een Excelbestand in te lezen en kolomnamen te trimmen
@@ -63,7 +66,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
                 st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
-            # Gebruik KI_Code als tijdelijke merge-sleutel in alle dataframes
+            # Voeg in alle dataframes een tijdelijke merge-sleutel toe
             for df in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df["temp_key"] = df["KI_Code"]
             
@@ -81,7 +84,7 @@ if st.button("Genereer Stierenkaart"):
             if debug_mode:
                 st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Definieer de mappingtabel
+            # Mappingtabel: we gebruiken "KI_Code" als bron en willen dat de outputkolom "KI-code" heet.
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
@@ -147,7 +150,7 @@ if st.button("Genereer Stierenkaart"):
                 std_naam = mapping["Stierenkaart"]
                 bron = mapping["Waar te vinden"]
                 
-                # Fallback: als "Stiernaam" ontbreekt maar "Stier" wel aanwezig is, gebruik dat
+                # Fallback: als "Stiernaam" ontbreekt maar "Stier" wel bestaat, gebruik dat
                 if std_naam == "Stier" and titel not in df_merged.columns and "Stier" in df_merged.columns:
                     final_data[std_naam] = df_merged["Stier"]
                     continue
@@ -186,31 +189,30 @@ if st.button("Genereer Stierenkaart"):
             st.session_state.df_stierenkaart = df_stierenkaart
             st.session_state.df_mapping = df_mapping
 
-# Als de stierenkaart beschikbaar is, toon de selectie-interface
+# Indien de stierenkaart beschikbaar is, toon de selectie-interface (zonder extra debug info)
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_mapping = st.session_state.df_mapping
 
-    # Maak een "Display" kolom: "KI-code - Stier"
+    # Maak een "Display" kolom voor handmatige selectie: "KI-code - Stier"
     code_col = "KI-code" if "KI-code" in df_stierenkaart.columns else "KI_Code"
     df_stierenkaart["Display"] = df_stierenkaart[code_col].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
     
-    # Opties voor handmatige selectie
+    # Gebruik de "Display" kolom als opties voor de handmatige selectie
+    # (Deze lijst wordt nu niet automatisch getoond, maar alleen via de multiselect)
     options = sorted(df_stierenkaart["Display"].dropna().unique().tolist())
-    st.write("Beschikbare bull-opties (KI-code - Stier):", options)
     
-    # Bulk-selectie: upload een bestand waarin kolom A de KI-code bevat
+    # Uploadoptie voor bulk-selectiebestand (met KI-code in kolom A)
     bulk_file = st.file_uploader("Upload bulk selectie bestand (met KI-code in kolom A)", type=["xlsx"], key="bulk")
     bulk_selected_codes = []
     if bulk_file is not None:
         try:
             df_bulk = pd.read_excel(bulk_file)
             df_bulk.columns = df_bulk.columns.str.strip()
-            # Gebruik de eerste kolom als KI-code
+            # Veronderstel dat de KI-code in kolom A staat; gebruik de eerste kolom
             bulk_codes = df_bulk.iloc[:, 0].dropna().astype(str).str.upper().str.strip().unique().tolist()
             bulk_selected_codes = sorted(bulk_codes)
             st.session_state.bulk_selected = bulk_selected_codes
-            st.write("Bulk selectie (KI-codes uit bestand):", bulk_selected_codes)
         except Exception as e:
             st.error("Fout bij het laden van het bulk selectie bestand: " + str(e))
     else:
@@ -219,22 +221,28 @@ if st.session_state.get("df_stierenkaart") is not None:
     # Handmatige selectie: laat de gebruiker bull-opties (display strings) selecteren
     manual_selected_display = st.multiselect("Voeg extra stieren toe (handmatige selectie):", options=options, default=[])
     manual_selected_codes = [item.split(" - ")[0] for item in manual_selected_display]
-    st.write("Handmatig geselecteerde KI-codes:", manual_selected_codes)
     
-    # Combineer bulk en handmatige selectie (uniteer de KI-codes)
+    # Combineer bulk en handmatige KI-codes
     final_selected_codes = sorted(set(bulk_selected_codes).union(set(manual_selected_codes)))
     mapping_dict = dict(zip(df_stierenkaart[code_col], df_stierenkaart["Display"]))
     final_display = [mapping_dict.get(code, code) for code in final_selected_codes]
-    st.write("Gecombineerde selectie (KI-code - Stier):", final_display)
+    
+    # Deze debug-informatie (beschikbare bull-opties, aantal rijen) wordt nu alleen getoond als debug_mode actief is.
+    if debug_mode:
+        st.write("Beschikbare bull-opties (KI-code - Stier):", options)
+        st.write("Bulk geselecteerde KI-codes:", bulk_selected_codes)
+        st.write("Handmatig geselecteerde KI-codes:", manual_selected_codes)
+        st.write("Gecombineerde selectie (KI-code - Stier):", final_display)
     
     # Filter de DataFrame op basis van de gecombineerde KI-codes
     df_selected = df_stierenkaart[df_stierenkaart[code_col].isin(final_selected_codes)]
     df_overig = df_stierenkaart[~df_stierenkaart[code_col].isin(final_selected_codes)]
     
-    st.write("Aantal geselecteerde rijen:", len(df_selected))
-    st.write("Aantal overige rijen:", len(df_overig))
+    if debug_mode:
+        st.write("Aantal geselecteerde rijen:", len(df_selected))
+        st.write("Aantal overige rijen:", len(df_overig))
     
-    # Exporteer naar Excel met drie tabbladen: Stierenkaart, Overige stieren en Mapping
+    # Exporteer naar Excel met drie sheets: Stierenkaart, Overige stieren en Mapping
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
