@@ -72,14 +72,12 @@ if st.button("Genereer Stierenkaart"):
             # Voor het Joop-bestand: zoek naar de TIP-kolom
             tip_col = None
             for col in df_joop.columns:
-                # Eerst zoeken naar een exacte match na stripping
                 if col.strip().upper() == "TIP":
                     tip_col = col
                     break
             if not tip_col:
-                # Indien geen exacte match, zoek naar een kolom waarin "tip" voorkomt (case-insensitief)
                 for col in df_joop.columns:
-                    if "tip" in col.strip().lower():
+                    if col.strip().upper().startswith("TIP"):
                         tip_col = col
                         break
             if tip_col:
@@ -115,7 +113,7 @@ if st.button("Genereer Stierenkaart"):
                 else:
                     st.write("Debug: 'TIP' kolom ontbreekt in df_merged.")
 
-            # Definieer de mapping-tabel (zorg dat de kolomtitel "TIP" uit het Joop-bestand correct wordt meegenomen)
+            # Definieer de mapping-tabel zodat de TIP-kolom meegenomen wordt
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
