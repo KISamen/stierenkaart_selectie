@@ -52,14 +52,20 @@ if st.button("Genereer Stierenkaart"):
         if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Fout bij laden bestanden.")
         else:
+            # Normaliseer KI-codes
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
+            # Hernoem de PFW kolom (titel in pimbestand is "PFW code")
+            if "PFW code" in df_pim.columns:
+                df_pim.rename(columns={"PFW code": "PFW_pim"}, inplace=True)
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
 
+            # Voeg een tijdelijke key toe voor de merges
             for df in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df["temp_key"] = df["KI_Code"]
 
+            # Merge de dataframes
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -69,6 +75,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.error("Kolom 'KI_Code' ontbreekt in CRV-bestand.")
 
+            # Definieer de mapping-tabel; let op de aanpassing voor de PFW kolom
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",         "Waar te vinden": ""},
@@ -76,7 +83,7 @@ if st.button("Genereer Stierenkaart"):
                 {"Titel in bestand": "Erf-fact",         "Stierenkaart": "Erf-fact",            "Waar te vinden": ""},
                 {"Titel in bestand": "Vader",            "Stierenkaart": "Afstamming V",        "Waar te vinden": "Bronbestand CRV"},
                 {"Titel in bestand": "M-vader",          "Stierenkaart": "Afstamming MV",       "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "PFW",              "Stierenkaart": "PFW",               "Waar te vinden": "PIM K.I. SAMEN"},
+                {"Titel in bestand": "PFW_pim",          "Stierenkaart": "PFW",               "Waar te vinden": "PIM K.I. SAMEN"},
                 {"Titel in bestand": "AAa code",         "Stierenkaart": "aAa",               "Waar te vinden": "PIM K.I. SAMEN"},
                 {"Titel in bestand": "Betacasine",       "Stierenkaart": "beta caseïne",      "Waar te vinden": "PIM K.I. SAMEN"},
                 {"Titel in bestand": "Kappa-caseine",    "Stierenkaart": "kappa Caseïne",     "Waar te vinden": "PIM K.I. SAMEN"},
