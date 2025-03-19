@@ -5,7 +5,7 @@ import io
 st.title("Stierenkaart Generator")
 
 st.markdown("""
-Upload de volgende bestanden:
+**Upload de volgende bestanden:**
 - **Bronbestand CRV DEC2024.xlsx** (bevat kolommen zoals "KI-Code", "Vader", "M-vader", etc.)
 - **PIM K.I. Samen.xlsx** (bevat kolommen zoals "Stiercode NL / KI code" en PIM-data: PFW, AAa code, Betacasine, Kappa-caseine)
 - **Prijslijst.xlsx** (kolom: "Artikelnr.")
@@ -13,9 +13,9 @@ Upload de volgende bestanden:
 
 **Bulk-selectie:**  
 Je kunt daarnaast een Excelbestand uploaden waarin in kolom A de KI‑code staat (bijv. 782666).  
-De KI‑codes uit dit bestand worden gebruikt om de bijbehorende bullnamen (Stier) uit de data op te zoeken.
+De KI‑codes uit dit bestand worden gebruikt om de bijbehorende stieren (bulls) uit de data op te zoeken.
 
-De uiteindelijke selectie is de combinatie (unie) van KI‑codes uit de bulkfile en extra handmatig geselecteerde KI‑codes.
+De uiteindelijke selectie is de combinatie (unie) van de KI‑codes uit de bulkfile en extra handmatig geselecteerde KI‑codes.  
 Ontbrekende data blijft leeg in de export.
 """)
 
@@ -66,7 +66,7 @@ if st.button("Genereer Stierenkaart"):
             st.write("Voorbeeld KI_Codes in CRV:", df_crv["KI_Code"].head().tolist())
             st.write("Voorbeeld KI_Codes in PIM:", df_pim["KI_Code"].head().tolist())
             
-            # Maak een tijdelijke merge-sleutel
+            # Maak een tijdelijke merge-sleutel in alle bestanden
             df_crv["temp_key"] = df_crv["KI_Code"]
             df_pim["temp_key"] = df_pim["KI_Code"]
             df_prijslijst["temp_key"] = df_prijslijst["KI_Code"]
@@ -75,7 +75,7 @@ if st.button("Genereer Stierenkaart"):
             common_keys = set(df_crv["temp_key"]).intersection(set(df_pim["temp_key"]))
             st.write("Aantal gemeenschappelijke KI-codes tussen CRV en PIM:", len(common_keys))
             
-            # Merge de dataframes: gebruik CRV als basis (left join)
+            # Merge de dataframes (CRV als basis)
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -84,7 +84,8 @@ if st.button("Genereer Stierenkaart"):
             
             st.write("Kolommen in merged dataframe:", df_merged.columns.tolist())
             
-            # Pas de mappingtabel aan: let op de eerste rij: gebruik "KI_Code" (zonder streepje)
+            # Definieer de mappingtabel.
+            # Let op: we gebruiken "KI_Code" als bron voor de KI-code, en willen dat de uiteindelijke kolom in de output "KI-code" heet.
             mapping_table = [
                 {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",       "Waar te vinden": ""},
@@ -195,12 +196,14 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_mapping = st.session_state.df_mapping
 
     # Maak een "Display" kolom voor de handmatige selectie: "KI-code - Stier"
+    # Gebruik de kolom "KI-code" als die bestaat, anders "KI_Code"
     if "KI-code" in df_stierenkaart.columns:
-        df_stierenkaart["Display"] = df_stierenkaart["KI-code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
+        code_col = "KI-code"
     else:
-        df_stierenkaart["Display"] = df_stierenkaart["KI_Code"].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
+        code_col = "KI_Code"
+    df_stierenkaart["Display"] = df_stierenkaart[code_col].astype(str) + " - " + df_stierenkaart["Stier"].astype(str)
     
-    # Gebruik de "Display" kolom als opties voor handmatige selectie
+    # Gebruik de "Display" kolom als opties voor de handmatige selectie
     options = sorted(df_stierenkaart["Display"].dropna().unique().tolist())
     st.write("Beschikbare bull-opties (KI-code - Stier):", options)
     
@@ -231,13 +234,19 @@ if st.session_state.get("df_stierenkaart") is not None:
     final_selected_codes = sorted(set(bulk_selected_codes).union(set(manual_selected_codes)))
     st.write("Gecombineerde KI-code selectie:", final_selected_codes)
     
-    # Filter de DataFrame op basis van de gecombineerde KI-codes
+    # Bepaal welke kolom we gebruiken voor de KI-code in de gegenereerde stierenkaart
     if "KI-code" in df_stierenkaart.columns:
-        df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
-        df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
+        code_col = "KI-code"
     else:
-        df_selected = df_stierenkaart[df_stierenkaart["KI_Code"].isin(final_selected_codes)]
-        df_overig = df_stierenkaart[~df_stierenkaart["KI_Code"].isin(final_selected_codes)]
+        code_col = "KI_Code"
+    st.write("KI-codes in de stierenkaart:", sorted(df_stierenkaart[code_col].dropna().unique().tolist()))
+    
+    # Filter de DataFrame op basis van de gecombineerde KI-codes
+    df_selected = df_stierenkaart[df_stierenkaart[code_col].isin(final_selected_codes)]
+    df_overig = df_stierenkaart[~df_stierenkaart[code_col].isin(final_selected_codes)]
+    
+    st.write("Aantal geselecteerde rijen:", len(df_selected))
+    st.write("Aantal overige rijen:", len(df_overig))
     
     # Exporteer naar Excel met drie sheets: "Stierenkaart", "Overige stieren" en "Mapping"
     output = io.BytesIO()
