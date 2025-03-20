@@ -200,7 +200,7 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
     df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
     
-    # Custom sortering op Ras en voeg een lege rij toe tussen de rassen
+    # Custom sortering op Ras en voeg een lege rij + ras-titel toe
     def custom_sort_ras(df):
         order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
         if "Ras" not in df.columns:
@@ -209,12 +209,15 @@ if st.session_state.get("df_stierenkaart") is not None:
         df_sorted = df.sort_values(by=["ras_sort", "Stier"], ascending=True)
         df_sorted.drop(columns=["ras_sort"], inplace=True)
         
-        # Voeg een lege rij toe tussen de verschillende rassen
-        df_with_blank = pd.DataFrame()
+        # Voeg een lege rij en ras-titel toe tussen de verschillende rassen
+        df_with_blank_and_title = pd.DataFrame()
         for ras, group in df_sorted.groupby("Ras"):
-            df_with_blank = pd.concat([df_with_blank, group, pd.DataFrame([{}])], ignore_index=True)
+            # Voeg een rij toe met de ras-titel
+            title_row = pd.DataFrame({col: "" for col in group.columns})
+            title_row["Ras"] = f"--- {ras} ---"  # Voeg de ras-titel toe
+            df_with_blank_and_title = pd.concat([df_with_blank_and_title, title_row, group], ignore_index=True)
         
-        return df_with_blank
+        return df_with_blank_and_title
 
     df_selected = custom_sort_ras(df_selected)
     df_overig = custom_sort_ras(df_overig)
