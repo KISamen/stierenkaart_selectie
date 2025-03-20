@@ -36,18 +36,17 @@ def custom_sort_ras(df):
 def create_top5_table(df):
     fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
-    # Gebruik alleen stieren met Ras "Holstein zwartbont" of "Red holstein"
     df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
         block = []
         block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-        # Filter voor zwartbont: alle rijen waarvan 'Ras' lowercase "zwartbont" of "rf" bevat
+        # Voor "zwartbont": rijen waarvan 'Ras' lowercase "zwartbont" of "rf" bevat
         df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-        # Filter voor roodbont: case-insensitief zoeken naar "red holstein"
+        # Voor "roodbont": rijen met 'Ras' die (case-insensitief) "red holstein" bevatten
         df_r = df[df["Ras"].str.lower().str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -87,6 +86,16 @@ def main():
     if "df_stierenkaart" not in st.session_state:
         st.session_state.df_stierenkaart = None
     
+    # Bulk selectie: Sla de lijst op in de session state zodat deze behouden blijft
+    bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
+    if bulk_file is not None:
+        df_bulk = pd.read_excel(bulk_file)
+        bulk_codes = df_bulk.iloc[:, 0].astype(str).str.upper().str.strip().tolist()
+        st.session_state.bulk_selected_codes = bulk_codes
+    else:
+        if "bulk_selected_codes" not in st.session_state:
+            st.session_state.bulk_selected_codes = []
+    
     if st.button("Genereer Stierenkaart"):
         if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
             st.error("Upload alle bestanden!")
@@ -99,7 +108,6 @@ def main():
             if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
                 st.error("Fout bij laden van één of meer bestanden.")
             else:
-                # Normaliseer KI-codes
                 df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
                 df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
@@ -135,7 +143,6 @@ def main():
                 else:
                     st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
                 
-                # Voeg tijdelijke key toe
                 for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                     df_temp["temp_key"] = df_temp["KI_Code"]
                 
@@ -153,7 +160,7 @@ def main():
                     st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                     st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
                 
-                # Mapping-tabel; Ras komt via Rasomschrijving
+                # Mapping-tabel: let op, Ras wordt via Rasomschrijving gevuld
                 mapping_table = [
                     {"Titel in bestand": "KI_Code",         "Stierenkaart": "KI-code",            "Waar te vinden": ""},
                     {"Titel in bestand": "Eigenaarscode",     "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
@@ -234,12 +241,6 @@ def main():
             
             basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()))
             
-            bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
-            bulk_selected_codes = []
-            if bulk_file:
-                df_bulk = pd.read_excel(bulk_file)
-                bulk_selected_codes = df_bulk.iloc[:, 0].astype(str).str.upper().str.strip().tolist()
-            
             with st.expander("Selecteer per ras"):
                 grouped_options = {}
                 for _, row in df_stierenkaart.iterrows():
@@ -261,6 +262,7 @@ def main():
                     per_ras_selection.extend(sel)
             
             manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
+            bulk_selected_codes = st.session_state.bulk_selected_codes if "bulk_selected_codes" in st.session_state else []
             combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
             valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
             
