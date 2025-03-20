@@ -104,7 +104,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Bijgewerkte mapping-tabel (Ras komt via Rasomschrijving)
+            # Bijgewerkte mapping-tabel (inclusief Ras via Rasomschrijving)
             mapping_table = [
                 {"Titel in bestand": "KI_Code",         "Stierenkaart": "KI-code",            "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",     "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
@@ -229,34 +229,7 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_selected = custom_sort_ras(df_selected_filtered)
     df_overig = custom_sort_ras(df_overig)
     
-    # Functie om de top 5 tabel te maken op basis van de originele gefilterde selectie
-    def create_top5_table(df):
-        fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
-        blocks = []
-        # We beperken tot de rassen "Holstein zwartbont" en "Red holstein"
-        df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
-        for fok in fokwaarden:
-            block = []
-            block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-            # Filter voor "zwartbont": neem rijen waarvan de kolom Ras "zwartbont" of "rf" bevat
-            df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
-            df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
-            df_z = df_z.sort_values(by=fok, ascending=False)
-            # Voor "roodbont": alleen "Red holstein"
-            df_r = df[df["Ras"] == "Red holstein"].copy()
-            df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
-            df_r = df_r.sort_values(by=fok, ascending=False)
-            for i in range(5):
-                row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
-                if i < len(df_z):
-                    row["zwartbont"] = str(df_z.iloc[i]["Stier"])
-                if i < len(df_r):
-                    row["roodbont"] = str(df_r.iloc[i]["Stier"])
-                block.append(row)
-            block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
-            blocks.extend(block)
-        return pd.DataFrame(blocks)
-    
+    # Maak de top 5 tabel op basis van de originele gefilterde selectie
     df_top5 = create_top5_table(df_selected_filtered)
     
     output = io.BytesIO()
