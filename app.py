@@ -104,7 +104,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Bijgewerkte mapping-tabel (let op: Ras komt nu van Rasomschrijving)
+            # Bijgewerkte mapping-tabel (Ras komt via Rasomschrijving)
             mapping_table = [
                 {"Titel in bestand": "KI_Code",         "Stierenkaart": "KI-code",            "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",     "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
@@ -198,7 +198,6 @@ if st.session_state.get("df_stierenkaart") is not None:
         # Groepeer de Display-opties per Ras
         grouped_options = {}
         for _, row in df_stierenkaart.iterrows():
-            # Gebruik de kolom 'Ras' (die gevuld wordt via Rasomschrijving)
             breed = row["Ras"]
             display = row["Display"]
             if breed not in grouped_options:
@@ -243,16 +242,12 @@ if st.session_state.get("df_stierenkaart") is not None:
         
         df_with_header = pd.DataFrame()
         first_group = True
-        # Groepeer per ras
         for ras, group in df_sorted.groupby("Ras"):
             if not first_group:
-                # Voeg een lege rij toe als scheiding
                 df_with_header = pd.concat([df_with_header, pd.DataFrame([{}])], ignore_index=True)
-            # Voeg een header toe met de naam van het ras
             header_row = {col: "" for col in df_sorted.columns}
             header_row["Ras"] = ras
             df_with_header = pd.concat([df_with_header, pd.DataFrame([header_row])], ignore_index=True)
-            # Voeg daarna de groep toe
             df_with_header = pd.concat([df_with_header, group], ignore_index=True)
             first_group = False
         return df_with_header
@@ -260,42 +255,43 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_selected = custom_sort_ras(df_selected)
     df_overig = custom_sort_ras(df_overig)
     
-    # Functie om een overzichtstabel te maken voor de top 5 stieren per fokwaarde
-    # Deze functie gebruikt alleen de selectie (df_selected) en houdt enkel rekening met rassen 'Holstein zwartbont' en 'Red holstein'
+    # Functie om de top 5 tabel te maken op basis van de geselecteerde stieren.
+    # Voor "zwartbont" wordt nu ook meegenomen als de kolom 'Ras' "Holstein zwartbont" bevat of de waarde "rf" bevat.
     def create_top5_table(df):
-        # Definieer de fokwaarden in de volgorde waarin ze moeten komen
+        # Definieer de fokwaarden in de gewenste volgorde
         fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
         blocks = []
-        # Beperk tot rassen waarvoor we de top 5 willen tonen
+        # Beperk tot de rassen waarvoor we de top 5 willen tonen
         df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
         for fok in fokwaarden:
             block = []
-            # Voeg een header-rij toe voor de huidige fokwaarde
+            # Header-rij voor de fokwaarde
             block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-            # Sorteer per ras voor de huidige fokwaarde
-            df_z = df[df["Ras"] == "Holstein zwartbont"].copy()
+            # Voor "zwartbont": neem stieren waarbij in de kolom Ras (lowercase) "zwartbont" of "rf" voorkomt.
+            df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
             df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
             df_z = df_z.sort_values(by=fok, ascending=False)
+            # Voor "roodbont": gebruik de rassen "Red holstein"
             df_r = df[df["Ras"] == "Red holstein"].copy()
             df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
             df_r = df_r.sort_values(by=fok, ascending=False)
-            # Voeg 5 rijen toe (als er minder dan 5 zijn, vul met lege strings)
+            # Voeg 5 rijen toe; als er minder dan 5 zijn, vul met lege strings.
             for i in range(5):
                 row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
                 if i < len(df_z):
-                    row["zwartbont"] = df_z.iloc[i]["Stier"]
+                    row["zwartbont"] = str(df_z.iloc[i]["Stier"])
                 if i < len(df_r):
-                    row["roodbont"] = df_r.iloc[i]["Stier"]
+                    row["roodbont"] = str(df_r.iloc[i]["Stier"])
                 block.append(row)
-            # Voeg een lege rij toe als scheiding tussen blokken
+            # Voeg een lege rij toe ter scheiding
             block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
             blocks.extend(block)
         return pd.DataFrame(blocks)
     
-    # Bereken de top 5 tabel op basis van de geselecteerde stieren
+    # Maak de top 5 tabel op basis van de geselecteerde stieren
     df_top5 = create_top5_table(df_selected)
     
-    # Exporteer naar Excel met drie tabbladen: 'Stierenkaart', 'Overige stieren' en 'Top 5 per ras'
+    # Exporteer naar Excel met drie tabbladen
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
