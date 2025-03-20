@@ -260,7 +260,8 @@ if st.session_state.get("df_stierenkaart") is not None:
     
     # Functie om de top 5 stieren per fokwaarde en per ras te berekenen
     def get_top5_per_fokwaarde(df):
-        fokwaarden = ["Geboortegemak", "Celgetal", "Vruchtbaarheid", "Klauwgezondheid", "Uier", "BEnen"]
+        # Gebruik de kolomnamen zoals in de mapping-tabel
+        fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
         results = []
         # Groepeer rassen: 'Holstein zwartbont' omvat ook alle rassen met 'zwartbont' of 'rf'
         df = df.copy()
