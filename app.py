@@ -195,7 +195,6 @@ if st.session_state.get("df_stierenkaart") is not None:
     
     # Expander voor selectie per Ras
     with st.expander("Selecteer per ras"):
-        # Groepeer de Display-opties per Ras
         grouped_options = {}
         for _, row in df_stierenkaart.iterrows():
             breed = row["Ras"]
@@ -203,11 +202,9 @@ if st.session_state.get("df_stierenkaart") is not None:
             if breed not in grouped_options:
                 grouped_options[breed] = []
             grouped_options[breed].append(display)
-        # Verwijder dubbele waarden en sorteer elke groep
         for breed in grouped_options:
             grouped_options[breed] = sorted(list(set(grouped_options[breed])))
     
-        # Definieer een custom order voor de rassen:
         order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
         sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
     
@@ -218,64 +215,37 @@ if st.session_state.get("df_stierenkaart") is not None:
             sel = st.multiselect(f"Selecteer stieren ({breed})", options=grouped_options[breed], key=f"ms_{breed}")
             per_ras_selection.extend(sel)
     
-    # Combineer de keuzes uit de algemene selectie en de per-ras selectie
     manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
     combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
     valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
     
-    # Optioneel: een gecombineerde multiselect
     final_combined_display = st.multiselect("Gecombineerde selectie:", options=list(mapping_dict.values()), default=valid_final_display)
     final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
     
-    # Filter de DataFrame op basis van de uiteindelijke KI-codes
-    df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
+    # Maak een kopie van de gefilterde selectie vóór custom sortering voor de top5 berekening
+    df_selected_filtered = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
     df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
     
-    # Custom sortering op Ras en voeg een lege rij en een header toe tussen de rassen
-    def custom_sort_ras(df):
-        order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
-        if "Ras" not in df.columns:
-            df["Ras"] = ""
-        df["ras_sort"] = df["Ras"].map(order_map).fillna(3)
-        df_sorted = df.sort_values(by=["ras_sort", "Stier"], ascending=True)
-        df_sorted.drop(columns=["ras_sort"], inplace=True)
-        
-        df_with_header = pd.DataFrame()
-        first_group = True
-        for ras, group in df_sorted.groupby("Ras"):
-            if not first_group:
-                df_with_header = pd.concat([df_with_header, pd.DataFrame([{}])], ignore_index=True)
-            header_row = {col: "" for col in df_sorted.columns}
-            header_row["Ras"] = ras
-            df_with_header = pd.concat([df_with_header, pd.DataFrame([header_row])], ignore_index=True)
-            df_with_header = pd.concat([df_with_header, group], ignore_index=True)
-            first_group = False
-        return df_with_header
-
-    df_selected = custom_sort_ras(df_selected)
+    df_selected = custom_sort_ras(df_selected_filtered)
     df_overig = custom_sort_ras(df_overig)
     
-    # Functie om de top 5 tabel te maken op basis van de geselecteerde stieren.
-    # Voor "zwartbont" wordt nu ook meegenomen als de kolom 'Ras' "Holstein zwartbont" bevat of de waarde "rf" bevat.
+    # Functie om de top 5 tabel te maken op basis van de originele gefilterde selectie
     def create_top5_table(df):
-        # Definieer de fokwaarden in de gewenste volgorde
         fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
         blocks = []
-        # Beperk tot de rassen waarvoor we de top 5 willen tonen
+        # We beperken tot de rassen "Holstein zwartbont" en "Red holstein"
         df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
         for fok in fokwaarden:
             block = []
-            # Header-rij voor de fokwaarde
             block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-            # Voor "zwartbont": neem stieren waarbij in de kolom Ras (lowercase) "zwartbont" of "rf" voorkomt.
+            # Filter voor "zwartbont": neem rijen waarvan de kolom Ras "zwartbont" of "rf" bevat
             df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
             df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
             df_z = df_z.sort_values(by=fok, ascending=False)
-            # Voor "roodbont": gebruik de rassen "Red holstein"
+            # Voor "roodbont": alleen "Red holstein"
             df_r = df[df["Ras"] == "Red holstein"].copy()
             df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
             df_r = df_r.sort_values(by=fok, ascending=False)
-            # Voeg 5 rijen toe; als er minder dan 5 zijn, vul met lege strings.
             for i in range(5):
                 row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
                 if i < len(df_z):
@@ -283,15 +253,12 @@ if st.session_state.get("df_stierenkaart") is not None:
                 if i < len(df_r):
                     row["roodbont"] = str(df_r.iloc[i]["Stier"])
                 block.append(row)
-            # Voeg een lege rij toe ter scheiding
             block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
             blocks.extend(block)
         return pd.DataFrame(blocks)
     
-    # Maak de top 5 tabel op basis van de geselecteerde stieren
-    df_top5 = create_top5_table(df_selected)
+    df_top5 = create_top5_table(df_selected_filtered)
     
-    # Exporteer naar Excel met drie tabbladen
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
