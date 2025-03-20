@@ -36,6 +36,64 @@ def load_excel(file):
         st.error(f"Fout bij laden bestand: {e}")
         return None
 
+# Aangepaste custom_sort_ras functie
+def custom_sort_ras(df):
+    # Zorg dat de kolommen 'Ras' en 'Stier' aanwezig zijn.
+    if "Ras" not in df.columns:
+        df["Ras"] = ""
+    if "Stier" not in df.columns:
+        df["Stier"] = ""
+    order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
+    df["ras_sort"] = df["Ras"].map(order_map).fillna(3)
+    df_sorted = df.sort_values(by=["ras_sort", "Stier"], ascending=True)
+    df_sorted.drop(columns=["ras_sort"], inplace=True)
+    df_with_header = pd.DataFrame()
+    first_group = True
+    for ras, group in df_sorted.groupby("Ras"):
+        if not first_group:
+            df_with_header = pd.concat([df_with_header, pd.DataFrame([{}])], ignore_index=True)
+        header_row = {col: "" for col in df_sorted.columns}
+        header_row["Ras"] = ras
+        df_with_header = pd.concat([df_with_header, pd.DataFrame([header_row])], ignore_index=True)
+        df_with_header = pd.concat([df_with_header, group], ignore_index=True)
+        first_group = False
+    return df_with_header
+
+# Functie om de top 5 tabel te maken op basis van de originele gefilterde selectie
+def create_top5_table(df):
+    # Definieer de fokwaarden in de gewenste volgorde
+    fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
+    blocks = []
+    # We beperken tot de rassen "Holstein zwartbont" en "Red holstein"
+    df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
+    for fok in fokwaarden:
+        # Controleer of de kolom bestaat, zo niet, maak deze leeg
+        if fok not in df.columns:
+            df[fok] = pd.NA
+        block = []
+        # Header-rij met fokwaarde label
+        block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
+        # Voor "zwartbont": filter op rijen waarvan "Ras" (lowercase) "zwartbont" of "rf" bevat
+        df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
+        df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
+        df_z = df_z.sort_values(by=fok, ascending=False)
+        # Voor "roodbont": alleen de rijen waar Ras exact "Red holstein" is
+        df_r = df[df["Ras"] == "Red holstein"].copy()
+        df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
+        df_r = df_r.sort_values(by=fok, ascending=False)
+        # Voeg 5 rijen toe (als er minder dan 5 zijn, vul met lege strings)
+        for i in range(5):
+            row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
+            if i < len(df_z):
+                row["zwartbont"] = str(df_z.iloc[i]["Stier"])
+            if i < len(df_r):
+                row["roodbont"] = str(df_r.iloc[i]["Stier"])
+            block.append(row)
+        # Voeg een lege rij toe als scheiding
+        block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
+        blocks.extend(block)
+    return pd.DataFrame(blocks)
+
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
         st.error("Upload alle bestanden!")
@@ -54,7 +112,7 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
-            # In het PIM-bestand: hernoem de kolom "PFW code" naar "PFW"
+            # In het PIM-bestand: hernoem "PFW code" naar "PFW"
             pfw_col = None
             for col in df_pim.columns:
                 if col.lower() == "pfw code":
@@ -66,7 +124,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
             
-            # In het Joop-bestand: zoek naar de TIP-kolom en hernoem naar "TIP"
+            # In het Joop-bestand: zoek en hernoem de TIP-kolom naar "TIP"
             tip_col = None
             for col in df_joop.columns:
                 if col.strip().upper() == "TIP":
@@ -104,7 +162,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Bijgewerkte mapping-tabel (inclusief Ras via Rasomschrijving)
+            # Bijgewerkte mapping-tabel (Ras wordt via Rasomschrijving gevuld)
             mapping_table = [
                 {"Titel in bestand": "KI_Code",         "Stierenkaart": "KI-code",            "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",     "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
@@ -178,8 +236,7 @@ if st.button("Genereer Stierenkaart"):
 # SELECTIE UI
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
-
-    # Maak een Display-kolom in de vorm "KI-code - Stier"
+    # Maak de Display-kolom in de vorm "KI-code - Stier"
     df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
     mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
     
@@ -222,7 +279,7 @@ if st.session_state.get("df_stierenkaart") is not None:
     final_combined_display = st.multiselect("Gecombineerde selectie:", options=list(mapping_dict.values()), default=valid_final_display)
     final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
     
-    # Maak een kopie van de gefilterde selectie vóór custom sortering voor de top5 berekening
+    # Maak een kopie van de gefilterde selectie vóór custom sortering (voor de top5 berekening)
     df_selected_filtered = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
     df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
     
