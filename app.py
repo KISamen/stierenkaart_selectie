@@ -232,4 +232,61 @@ def main():
         df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
         mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
         
-        basic_
+        basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()))
+        
+        bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
+        bulk_selected_codes = []
+        if bulk_file:
+            df_bulk = pd.read_excel(bulk_file)
+            bulk_selected_codes = df_bulk.iloc[:, 0].astype(str).str.upper().str.strip().tolist()
+        
+        with st.expander("Selecteer per ras"):
+            grouped_options = {}
+            for _, row in df_stierenkaart.iterrows():
+                breed = row["Ras"]
+                display = row["Display"]
+                if breed not in grouped_options:
+                    grouped_options[breed] = []
+                grouped_options[breed].append(display)
+            for breed in grouped_options:
+                grouped_options[breed] = sorted(list(set(grouped_options[breed])))
+            order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
+            sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
+        
+            st.markdown("### Selectie per ras")
+            per_ras_selection = []
+            for breed in sorted_breeds:
+                st.markdown(f"**{breed}**")
+                sel = st.multiselect(f"Selecteer stieren ({breed})", options=grouped_options[breed], key=f"ms_{breed}")
+                per_ras_selection.extend(sel)
+        
+        manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
+        combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
+        valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
+        
+        final_combined_display = st.multiselect("Gecombineerde selectie:", options=list(mapping_dict.values()), default=valid_final_display)
+        final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
+        
+        df_selected_filtered = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
+        df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
+        
+        df_selected = custom_sort_ras(df_selected_filtered)
+        df_overig = custom_sort_ras(df_overig)
+        
+        df_top5 = create_top5_table(df_selected_filtered)
+        
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
+            df_overig.to_excel(writer, sheet_name='Overige stieren', index=False)
+            df_top5.to_excel(writer, sheet_name='Top 5 per ras', index=False)
+        
+        st.download_button(
+            label="Download stierenkaart Excel",
+            data=output.getvalue(),
+            file_name="stierenkaart.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+if __name__ == '__main__':
+    main()
