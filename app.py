@@ -24,6 +24,7 @@ uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["
 
 debug_mode = st.checkbox("Activeer debug", value=False)
 
+# Zorg dat de uiteindelijke stierenkaart in de session state wordt opgeslagen
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
 
@@ -36,8 +37,8 @@ def load_excel(file):
         st.error(f"Fout bij laden bestand: {e}")
         return None
 
-# Aangepaste custom_sort_ras functie
 def custom_sort_ras(df):
+    # Zorg dat de kolommen 'Ras' en 'Stier' aanwezig zijn.
     if "Ras" not in df.columns:
         df["Ras"] = ""
     if "Stier" not in df.columns:
@@ -61,15 +62,19 @@ def custom_sort_ras(df):
 def create_top5_table(df):
     fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
+    # Beperk tot de rassen "Holstein zwartbont" en "Red holstein"
     df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
     for fok in fokwaarden:
+        # Zorg dat de kolom bestaat; zo niet, maak deze leeg
         if fok not in df.columns:
             df[fok] = pd.NA
         block = []
         block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
+        # Voor "zwartbont": filter op rijen waarvan de kolom 'Ras' (lowercase) "zwartbont" of "rf" bevat.
         df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
+        # Voor "roodbont": alleen de rijen waar Ras exact "Red holstein" is
         df_r = df[df["Ras"] == "Red holstein"].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -84,7 +89,7 @@ def create_top5_table(df):
         blocks.extend(block)
     return pd.DataFrame(blocks)
 
-# Main code: verwerken en mergen van de bestanden
+# Alle verwerking gebeurt wanneer de gebruiker op "Genereer Stierenkaart" drukt
 if st.button("Genereer Stierenkaart"):
     if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
         st.error("Upload alle bestanden!")
@@ -97,11 +102,13 @@ if st.button("Genereer Stierenkaart"):
         if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Fout bij laden bestanden.")
         else:
+            # Normaliseer KI-codes
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
+            # In PIM: hernoem "PFW code" naar "PFW"
             pfw_col = None
             for col in df_pim.columns:
                 if col.lower() == "pfw code":
@@ -113,6 +120,7 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
             
+            # In Joop: zoek naar de TIP-kolom en hernoem naar "TIP"
             tip_col = None
             for col in df_joop.columns:
                 if col.strip().upper() == "TIP":
@@ -130,9 +138,11 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
             
+            # Voeg een tijdelijke key toe voor de merge
             for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df_temp["temp_key"] = df_temp["KI_Code"]
             
+            # Merge de dataframes op temp_key
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -218,10 +228,9 @@ if st.button("Genereer Stierenkaart"):
             
             df_stierenkaart = pd.DataFrame(final_data)
             df_stierenkaart.fillna("", inplace=True)
-            
             st.session_state.df_stierenkaart = df_stierenkaart
 
-# SELECTIE UI
+# SELECTIE UI en Excel-export
 if st.session_state.get("df_stierenkaart") is not None:
     df_stierenkaart = st.session_state.df_stierenkaart
     df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
@@ -245,7 +254,6 @@ if st.session_state.get("df_stierenkaart") is not None:
             grouped_options[breed].append(display)
         for breed in grouped_options:
             grouped_options[breed] = sorted(list(set(grouped_options[breed])))
-    
         order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
         sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
     
