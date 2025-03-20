@@ -200,7 +200,7 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_selected = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
     df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
     
-    # Custom sortering op Ras en voeg een lege rij + ras-titel toe
+    # Custom sortering op Ras en voeg een lege rij en een header toe tussen de rassen
     def custom_sort_ras(df):
         order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
         if "Ras" not in df.columns:
@@ -209,25 +209,31 @@ if st.session_state.get("df_stierenkaart") is not None:
         df_sorted = df.sort_values(by=["ras_sort", "Stier"], ascending=True)
         df_sorted.drop(columns=["ras_sort"], inplace=True)
         
-        # Voeg een lege rij en ras-titel toe tussen de verschillende rassen
-        df_with_blank_and_title = pd.DataFrame()
+        df_with_header = pd.DataFrame()
+        first_group = True
+        # Groepeer per ras
         for ras, group in df_sorted.groupby("Ras"):
-            # Voeg een rij toe met de ras-titel
-            title_row = pd.DataFrame({col: "" for col in group.columns})
-            title_row["Ras"] = f"--- {ras} ---"  # Voeg de ras-titel toe
-            df_with_blank_and_title = pd.concat([df_with_blank_and_title, title_row, group], ignore_index=True)
-        
-        return df_with_blank_and_title
+            if not first_group:
+                # Voeg een lege rij toe als scheiding
+                df_with_header = pd.concat([df_with_header, pd.DataFrame([{}])], ignore_index=True)
+            # Voeg een header toe met de naam van het ras
+            header_row = {col: "" for col in df_sorted.columns}
+            header_row["Ras"] = ras
+            df_with_header = pd.concat([df_with_header, pd.DataFrame([header_row])], ignore_index=True)
+            # Voeg daarna de groep toe
+            df_with_header = pd.concat([df_with_header, group], ignore_index=True)
+            first_group = False
+        return df_with_header
 
     df_selected = custom_sort_ras(df_selected)
     df_overig = custom_sort_ras(df_overig)
-
+    
     # Exporteer naar Excel
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
         df_overig.to_excel(writer, sheet_name='Overige stieren', index=False)
-
+    
     st.download_button(
         label="Download stierenkaart Excel",
         data=output.getvalue(),
