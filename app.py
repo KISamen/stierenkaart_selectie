@@ -37,18 +37,15 @@ def custom_sort_ras(df):
 def create_top5_table(df):
     fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
-    # Beperk tot de rassen "Holstein zwartbont" en "Red holstein"
     df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
         block = []
         block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-        # Voor "zwartbont": rijen waarvan 'Ras' (lowercase) "zwartbont" of "rf" bevat
         df_z = df[df["Ras"].str.lower().str.contains("zwartbont") | df["Ras"].str.lower().str.contains("rf")].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-        # Voor "roodbont": alleen de rijen waar Ras exact "Red holstein" is
         df_r = df[df["Ras"] == "Red holstein"].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -65,7 +62,6 @@ def create_top5_table(df):
 
 # --- Einde Functies ---
 
-# Layout instellingen
 st.set_page_config(layout="wide")
 st.title("Stierenkaart Generator")
 
@@ -87,17 +83,14 @@ uploaded_prijslijst = st.file_uploader("Upload Prijslijst.xlsx", type=["xlsx"], 
 uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
 debug_mode = st.checkbox("Activeer debug", value=False)
 
-# Zorg dat de uiteindelijke stierenkaart in de session state wordt opgeslagen
+# Sla de uiteindelijke stierenkaart op in de session state
 if "df_stierenkaart" not in st.session_state:
     st.session_state.df_stierenkaart = None
 
-# Eén enkele trigger voor de verwerking
 if st.button("Genereer Stierenkaart"):
-    # Controleer of alle bestanden zijn geüpload
     if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
         st.error("Upload alle bestanden!")
     else:
-        # Lees bestanden in
         df_crv = load_excel(uploaded_crv)
         df_pim = load_excel(uploaded_pim)
         df_prijslijst = load_excel(uploaded_prijslijst)
@@ -106,7 +99,6 @@ if st.button("Genereer Stierenkaart"):
         if any(df is None for df in [df_crv, df_pim, df_prijslijst, df_joop]):
             st.error("Fout bij laden van één of meer bestanden.")
         else:
-            # Normaliseer KI-codes
             df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
             df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
@@ -142,9 +134,9 @@ if st.button("Genereer Stierenkaart"):
             else:
                 st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
             
-            # Voeg tijdelijke key toe en merge
             for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                 df_temp["temp_key"] = df_temp["KI_Code"]
+            
             df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
             df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
             df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -159,7 +151,7 @@ if st.button("Genereer Stierenkaart"):
                 st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Mapping-tabel (let op: de kolom Ras wordt via Rasomschrijving gevuld)
+            # Mapping-tabel; let op dat we Ras vanuit Rasomschrijving overnemen
             mapping_table = [
                 {"Titel in bestand": "KI_Code",         "Stierenkaart": "KI-code",            "Waar te vinden": ""},
                 {"Titel in bestand": "Eigenaarscode",     "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
@@ -221,8 +213,8 @@ if st.button("Genereer Stierenkaart"):
             
             final_data = {}
             for mapping in mapping_table:
-                titel = mapping["Titel in bestand"]
-                std_naam = mapping["Stierenkaart"]
+                titel = mapping.get("Titel in bestand", "")
+                std_naam = mapping.get("Stierenkaart", "")
                 if titel in df_merged.columns:
                     final_data[std_naam] = df_merged[titel]
                 else:
@@ -230,7 +222,6 @@ if st.button("Genereer Stierenkaart"):
             
             df_stierenkaart = pd.DataFrame(final_data)
             df_stierenkaart.fillna("", inplace=True)
-            
             st.session_state.df_stierenkaart = df_stierenkaart
 
 # --- UI Selectie en Excel-export ---
