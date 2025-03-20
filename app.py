@@ -54,15 +54,15 @@ if st.button("Genereer Stierenkaart"):
             df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
             df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
             
-            # In het PIM-bestand: hernoem de kolom "PFW code" naar "PFW_pim"
+            # In het PIM-bestand: hernoem de kolom "PFW code" naar "PFW"
             pfw_col = None
             for col in df_pim.columns:
                 if col.lower() == "pfw code":
                     pfw_col = col
                     break
             if pfw_col:
-                df_pim.rename(columns={pfw_col: "PFW_pim"}, inplace=True)
-                df_pim["PFW_pim"] = df_pim["PFW_pim"].astype(str).str.strip()
+                df_pim.rename(columns={pfw_col: "PFW"}, inplace=True)
+                df_pim["PFW"] = df_pim["PFW"].astype(str).str.strip()
             else:
                 st.warning("Kolom 'PFW code' niet gevonden in het pimbestand.")
             
@@ -101,33 +101,66 @@ if st.button("Genereer Stierenkaart"):
             
             if debug_mode:
                 st.write("Debug: Kolommen in df_merged:", df_merged.columns.tolist())
-                st.write("Debug: Voorbeeld data PFW_pim:", df_merged[["KI_Code", "PFW_pim"]].head())
+                st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
                 st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
             
-            # Mapping-tabel: haal de gewenste kolommen op en hernoem ze
+            # Bijgewerkte mapping-tabel
             mapping_table = [
-                {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",           "Waar te vinden": ""},
-                {"Titel in bestand": "Stiernummer",     "Stierenkaart": "Stiernummer",       "Waar te vinden": ""},
-                {"Titel in bestand": "Stiernaam",       "Stierenkaart": "Stier",             "Waar te vinden": ""},
-                {"Titel in bestand": "Erf-fact",        "Stierenkaart": "Erf-fact",          "Waar te vinden": ""},
-                {"Titel in bestand": "Vader",           "Stierenkaart": "Afstamming V",      "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "M-vader",         "Stierenkaart": "Afstamming MV",     "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "PFW_pim",         "Stierenkaart": "PFW",             "Waar te vinden": "PIM K.I. SAMEN"},
-                {"Titel in bestand": "AAa code",        "Stierenkaart": "aAa",             "Waar te vinden": "PIM K.I. SAMEN"},
-                {"Titel in bestand": "Betacasine",      "Stierenkaart": "beta caseïne",    "Waar te vinden": "PIM K.I. SAMEN"},
-                {"Titel in bestand": "Kappa-caseine",   "Stierenkaart": "kappa Caseïne",   "Waar te vinden": "PIM K.I. SAMEN"},
-                {"Titel in bestand": "Prijs",           "Stierenkaart": "Prijs",           "Waar te vinden": "Prijslijst"},
-                {"Titel in bestand": "Prijs gesekst",   "Stierenkaart": "Prijs gesekst",   "Waar te vinden": "Prijslijst"},
-                {"Titel in bestand": "Bt_1",            "Stierenkaart": "% betrouwbaarheid", "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "kgM",             "Stierenkaart": "kg melk",         "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "%V",              "Stierenkaart": "% vet",           "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "%E",              "Stierenkaart": "% eiwit",         "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "kgV",             "Stierenkaart": "kg vet",          "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "kgE",             "Stierenkaart": "kg eiwit",        "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "INET",            "Stierenkaart": "INET",            "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "NVI",             "Stierenkaart": "NVI",             "Waar te vinden": "Bronbestand CRV"},
-                {"Titel in bestand": "TIP",             "Stierenkaart": "TIP",             "Waar te vinden": "Bronbestand Joop Olieman"},
-                {"Titel in bestand": "Rasomschrijving", "Stierenkaart": "Ras",             "Waar te vinden": "PIM K.I. SAMEN"}
+                {"Titel in bestand": "KI_Code",        "Stierenkaart": "KI-code",            "Waar te vinden": ""},
+                {"Titel in bestand": "Eigenaarscode",    "Stierenkaart": "Eigenaarscode",        "Waar te vinden": ""},
+                {"Titel in bestand": "Stiernummer",      "Stierenkaart": "Stiernummer",          "Waar te vinden": ""},
+                {"Titel in bestand": "Stiernaam",        "Stierenkaart": "Stier",                "Waar te vinden": ""},
+                {"Titel in bestand": "Erf-fact",         "Stierenkaart": "Erf-fact",             "Waar te vinden": ""},
+                {"Titel in bestand": "Vader",            "Stierenkaart": "Afstamming V",         "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "M-vader",          "Stierenkaart": "Afstamming MV",        "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "PFW",              "Stierenkaart": "PFW",                "Waar te vinden": "PIM K.I. SAMEN"},
+                {"Titel in bestand": "AAa code",         "Stierenkaart": "aAa",                "Waar te vinden": "PIM K.I. SAMEN"},
+                {"Titel in bestand": "Betacasine",       "Stierenkaart": "beta caseïne",       "Waar te vinden": "PIM K.I. SAMEN"},
+                {"Titel in bestand": "Kappa-caseine",    "Stierenkaart": "kappa Caseïne",      "Waar te vinden": "PIM K.I. SAMEN"},
+                {"Titel in bestand": "Prijs",            "Stierenkaart": "Prijs",              "Waar te vinden": "Prijslijst"},
+                {"Titel in bestand": "Prijs gesekst",    "Stierenkaart": "Prijs gesekst",      "Waar te vinden": "Prijslijst"},
+                {"Titel in bestand": "Bt_1",             "Stierenkaart": "% betrouwbaarheid",  "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "kgM",              "Stierenkaart": "kg melk",            "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "%V",               "Stierenkaart": "% vet",              "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "%E",               "Stierenkaart": "% eiwit",            "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "kgV",              "Stierenkaart": "kg vet",             "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "kgE",              "Stierenkaart": "kg eiwit",           "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "INET",             "Stierenkaart": "INET",               "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "NVI",              "Stierenkaart": "NVI",                "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "TIP",              "Stierenkaart": "TIP",                "Waar te vinden": "Bronbestand Joop Olieman"},
+                {"Titel in bestand": "Bt_5",             "Stierenkaart": "% betrouwbaar",      "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "F",                "Stierenkaart": "frame",              "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "U",                "Stierenkaart": "uier",               "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "B_6",              "Stierenkaart": "benen",              "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Ext",              "Stierenkaart": "totaal",             "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "HT",               "Stierenkaart": "hoogtemaat",         "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "VH",               "Stierenkaart": "voorhand",           "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "IH",               "Stierenkaart": "inhoud",             "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "OH",               "Stierenkaart": "openheid",           "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "CS",               "Stierenkaart": "conditie score",     "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "KL",               "Stierenkaart": "kruisligging",       "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "KB",               "Stierenkaart": "kruisbreedte",       "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "BA",               "Stierenkaart": "beenstand achter",   "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "BZ",               "Stierenkaart": "beenstand zij",      "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "KH",               "Stierenkaart": "klauwhoek",          "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "VB",               "Stierenkaart": "voorbeenstand",      "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "BG",               "Stierenkaart": "beengebruik",        "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "VA",               "Stierenkaart": "vooruieraanhechting", "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "VP",               "Stierenkaart": "voorspeenplaatsing",  "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "SL",               "Stierenkaart": "speenlengte",        "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "UD",               "Stierenkaart": "uierdiepte",         "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "AH",               "Stierenkaart": "achteruierhoogte",   "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "OB",               "Stierenkaart": "ophangband",         "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "AP",               "Stierenkaart": "achterspeenplaatsing", "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Geb",              "Stierenkaart": "Geboortegemak",       "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "MS",               "Stierenkaart": "melksnelheid",       "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Cgt",              "Stierenkaart": "celgetal",          "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Vru",              "Stierenkaart": "vruchtbaarheid",    "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "KA",               "Stierenkaart": "karakter",          "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Ltrh",             "Stierenkaart": "laatrijpheid",      "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Pers",             "Stierenkaart": "Persistentie",      "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Kgh",              "Stierenkaart": "klauwgezondheid",   "Waar te vinden": "Bronbestand CRV"},
+                {"Titel in bestand": "Lvd",              "Stierenkaart": "levensduur",        "Waar te vinden": "Bronbestand CRV"}
             ]
             
             final_data = {}
@@ -174,10 +207,7 @@ if st.session_state.get("df_stierenkaart") is not None:
             grouped_options[breed] = sorted(list(set(grouped_options[breed])))
     
         # Definieer een custom order voor de rassen:
-        order_map = {
-            "Holstein zwartbont": 1,
-            "Red holstein": 2
-        }
+        order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
         sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
     
         st.markdown("### Selectie per ras")
@@ -228,11 +258,37 @@ if st.session_state.get("df_stierenkaart") is not None:
     df_selected = custom_sort_ras(df_selected)
     df_overig = custom_sort_ras(df_overig)
     
-    # Exporteer naar Excel
+    # Functie om de top 5 stieren per fokwaarde en per ras te berekenen
+    def get_top5_per_fokwaarde(df):
+        fokwaarden = ["Geboortegemak", "Celgetal", "Vruchtbaarheid", "Klauwgezondheid", "Uier", "BEnen"]
+        results = []
+        # Groepeer rassen: 'Holstein zwartbont' omvat ook alle rassen met 'zwartbont' of 'rf'
+        df = df.copy()
+        df["Ras_group"] = df["Ras"].apply(lambda x: "Holstein zwartbont" if ("zwartbont" in x.lower() or "rf" in x.lower()) else x)
+        for fok in fokwaarden:
+            for breed in ["Holstein zwartbont", "Red holstein"]:
+                df_breed = df[df["Ras_group"] == breed].copy()
+                # Converteer de kolom naar numeriek; niet-numerieke waarden worden NaN
+                df_breed[fok] = pd.to_numeric(df_breed[fok], errors='coerce')
+                df_sorted = df_breed.sort_values(by=fok, ascending=False)
+                top5 = df_sorted.head(5).copy()
+                top5["Fokwaarde"] = fok
+                top5["Rank"] = range(1, len(top5)+1)
+                results.append(top5[["Ras_group", "Fokwaarde", "Rank", "KI-code", "Stier", fok]])
+        if results:
+            return pd.concat(results, ignore_index=True)
+        else:
+            return pd.DataFrame()
+    
+    # Bereken de top 5 stieren per fokwaarde
+    df_top5 = get_top5_per_fokwaarde(df_stierenkaart)
+    
+    # Exporteer naar Excel met drie tabbladen
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
         df_overig.to_excel(writer, sheet_name='Overige stieren', index=False)
+        df_top5.to_excel(writer, sheet_name='Top 5 per ras', index=False)
     
     st.download_button(
         label="Download stierenkaart Excel",
