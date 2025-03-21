@@ -40,8 +40,8 @@ def create_top5_table(df):
     df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
     fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
-    # Beperk tot stieren met Ras "Holstein zwartbont" of "Red Holstein"
-    df = df[df["Ras"].isin(["Holstein zwartbont", "Red Holstein"])].copy()
+    # Beperk tot stieren met Ras "Holstein zwartbont", "Holstein zwartbont + RF" of "Red Holstein"
+    df = df[df["Ras"].isin(["Holstein zwartbont", "Holstein zwartbont + RF", "Red Holstein"])].copy()
     
     for fok in fokwaarden:
         if fok not in df.columns:
@@ -57,12 +57,12 @@ def create_top5_table(df):
         }
         block.append(header_row)
         
-        # Filter voor zwarte stieren: rijen waar Ras_clean "zwartbont" of "rf" bevat.
-        df_z = df[(df["Ras_clean"].str.contains("zwartbont")) | (df["Ras_clean"].str.contains("rf"))].copy()
+        # Filter voor zwarte stieren: neem rijen waar Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
+        df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
         
-        # Filter voor rode stieren: rijen waar Ras_clean "red holstein" bevat.
+        # Filter voor rode stieren: neem rijen waar Ras_clean "red holstein" bevat.
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
