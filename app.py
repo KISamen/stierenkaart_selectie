@@ -42,31 +42,55 @@ def create_top5_table(df):
     blocks = []
     # Beperk tot stieren met Ras "Holstein zwartbont" of "Red Holstein"
     df = df[df["Ras"].isin(["Holstein zwartbont", "Red Holstein"])].copy()
+    
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
         block = []
-        # Header-rij met de fokwaarde
-        block.append({"Fokwaarde": fok, "zwartbont": "", "roodbont": ""})
-        # Voor "zwartbont": neem alle rijen waar Ras_clean "zwartbont" of "rf" bevat.
+        # Header-rij voor deze fokwaarde met aparte kolommen voor stier en waarde
+        header_row = {
+            "Fokwaarde": fok,
+            "zwartbont_stier": "Stier",
+            "zwartbont_value": "Waarde",
+            "roodbont_stier": "Stier",
+            "roodbont_value": "Waarde"
+        }
+        block.append(header_row)
+        
+        # Filter voor zwarte stieren: rijen waar Ras_clean "zwartbont" of "rf" bevat.
         df_z = df[(df["Ras_clean"].str.contains("zwartbont")) | (df["Ras_clean"].str.contains("rf"))].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-        # Voor "roodbont": neem alle rijen waar Ras_clean "red holstein" bevat.
+        
+        # Filter voor rode stieren: rijen waar Ras_clean "red holstein" bevat.
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
+        
+        # Voeg 5 rijen toe met de top 5 waarden per groep
         for i in range(5):
-            row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
+            row = {
+                "Fokwaarde": "",
+                "zwartbont_stier": "",
+                "zwartbont_value": "",
+                "roodbont_stier": "",
+                "roodbont_value": ""
+            }
             if i < len(df_z):
-                value_z = df_z.iloc[i][fok]
-                # Indien de waarde niet NaN is, formatteer dan de output
-                row["zwartbont"] = f"{df_z.iloc[i]['Stier']} ({value_z})"
+                row["zwartbont_stier"] = str(df_z.iloc[i]["Stier"])
+                row["zwartbont_value"] = str(df_z.iloc[i][fok])
             if i < len(df_r):
-                value_r = df_r.iloc[i][fok]
-                row["roodbont"] = f"{df_r.iloc[i]['Stier']} ({value_r})"
+                row["roodbont_stier"] = str(df_r.iloc[i]["Stier"])
+                row["roodbont_value"] = str(df_r.iloc[i][fok])
             block.append(row)
-        block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
+        # Voeg een lege rij toe als scheiding
+        block.append({
+            "Fokwaarde": "",
+            "zwartbont_stier": "",
+            "zwartbont_value": "",
+            "roodbont_stier": "",
+            "roodbont_value": ""
+        })
         blocks.extend(block)
     return pd.DataFrame(blocks)
 
