@@ -40,8 +40,8 @@ def create_top5_table(df):
     df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
     fokwaarden = ["Geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
-    # Beperk tot stieren met Ras "Holstein zwartbont" of "Red holstein"
-    df = df[df["Ras"].isin(["Holstein zwartbont", "Red holstein"])].copy()
+    # Beperk tot stieren met Ras "Holstein zwartbont" of "Red Hholstein"
+    df = df[df["Ras"].isin(["Holstein zwartbont", "Red Holstein"])].copy()
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
@@ -52,8 +52,8 @@ def create_top5_table(df):
         df_z = df[(df["Ras_clean"].str.contains("zwartbont")) | (df["Ras_clean"].str.contains("rf"))].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-        # Voor "roodbont": neem alle rijen waar Ras_clean "red holstein" bevat.
-        df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
+        # Voor "roodbont": neem alle rijen waar Ras_clean "Red Holstein" bevat.
+        df_r = df[df["Ras_clean"].str.contains("Red Holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
         for i in range(5):
@@ -259,7 +259,7 @@ def main():
                         grouped_options[breed].append(display)
                     for breed in grouped_options:
                         grouped_options[breed] = sorted(list(set(grouped_options[breed])))
-                    order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
+                    order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
                     sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
                 
                     st.markdown("### Selectie per ras")
