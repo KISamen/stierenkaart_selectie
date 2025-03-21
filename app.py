@@ -19,7 +19,7 @@ def custom_sort_ras(df):
         df["Ras"] = ""
     if "Stier" not in df.columns:
         df["Stier"] = ""
-    order_map = {"Holstein zwartbont": 1, "Red holstein": 2}
+    order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
     df["ras_sort"] = df["Ras"].map(order_map).fillna(3)
     df_sorted = df.sort_values(by=["ras_sort", "Stier"], ascending=True)
     df_sorted.drop(columns=["ras_sort"], inplace=True)
