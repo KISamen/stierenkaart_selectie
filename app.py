@@ -59,9 +59,12 @@ def create_top5_table(df):
         for i in range(5):
             row = {"Fokwaarde": "", "zwartbont": "", "roodbont": ""}
             if i < len(df_z):
-                row["zwartbont"] = str(df_z.iloc[i]["Stier"])
+                value_z = df_z.iloc[i][fok]
+                # Indien de waarde niet NaN is, formatteer dan de output
+                row["zwartbont"] = f"{df_z.iloc[i]['Stier']} ({value_z})"
             if i < len(df_r):
-                row["roodbont"] = str(df_r.iloc[i]["Stier"])
+                value_r = df_r.iloc[i][fok]
+                row["roodbont"] = f"{df_r.iloc[i]['Stier']} ({value_r})"
             block.append(row)
         block.append({"Fokwaarde": "", "zwartbont": "", "roodbont": ""})
         blocks.extend(block)
