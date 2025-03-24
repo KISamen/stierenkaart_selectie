@@ -63,12 +63,12 @@ mapping_table_nl = [
     {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
 ]
 
-# Placeholder-mapping tables voor de andere talen (pas deze aan naar wens)
-mapping_table_vlaams = mapping_table_nl.copy()    # Vervang dit door de Vlaamse titels
-mapping_table_waals   = mapping_table_nl.copy()    # Vervang dit door de Waalse titels
-mapping_table_engels  = mapping_table_nl.copy()    # Vervang dit door de Engelse titels
-mapping_table_duits   = mapping_table_nl.copy()    # Vervang dit door de Duitse titels
-mapping_table_canadese = mapping_table_nl.copy()  # Vervang dit door de Canadese titels
+# Voorlopige placeholders voor andere talen (pas de titels aan indien nodig)
+mapping_table_vlaams = mapping_table_nl.copy()    
+mapping_table_waals   = mapping_table_nl.copy()    
+mapping_table_engels  = mapping_table_nl.copy()    
+mapping_table_duits   = mapping_table_nl.copy()    
+mapping_table_canadese = mapping_table_nl.copy()  
 
 # Verzamel alle mapping tables in een dictionary
 mapping_tables = {
@@ -135,12 +135,12 @@ def create_top5_table(df):
         }
         block.append(header_row)
         
-        # Filter voor zwarte stieren: neem rijen waar Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
+        # Filter voor zwarte stieren: rijen waarbij Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
         
-        # Filter voor rode stieren: neem rijen waar Ras_clean "red holstein" bevat.
+        # Filter voor rode stieren: rijen waarbij Ras_clean "red holstein" bevat.
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -199,7 +199,7 @@ def main():
     uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
     debug_mode = st.checkbox("Activeer debug", value=False)
     
-    # Bulk-selectie: upload en sla op in session state zodat deze behouden blijft
+    # Bulk-selectie: upload en bewaar in session state
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     if bulk_file is not None:
         df_bulk = pd.read_excel(bulk_file)
@@ -294,6 +294,7 @@ def main():
                 df_stierenkaart.fillna("", inplace=True)
                 st.session_state.df_stierenkaart = df_stierenkaart
             
+            # Handmatige selectie van stieren
             if st.session_state.get("df_stierenkaart") is not None:
                 df_stierenkaart = st.session_state.df_stierenkaart
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
@@ -313,7 +314,7 @@ def main():
                         grouped_options[breed] = sorted(list(set(grouped_options[breed])))
                     order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
                     sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
-                
+                    
                     st.markdown("### Selectie per ras")
                     per_ras_selection = []
                     for breed in sorted_breeds:
