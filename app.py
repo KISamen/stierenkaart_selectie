@@ -63,130 +63,12 @@ mapping_table_nl = [
     {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
 ]
 
-# --- Mapping tables per taal ---
-# NL-stierenkaart (jouw originele mapping table)
-mapping_table_vlaams = [
-    {"Titel in bestand": "KI_Code", "Stierenkaart": "KI-code", "Waar te vinden": ""},
-    {"Titel in bestand": "Eigenaarscode", "Stierenkaart": "Eigenaarscode", "Waar te vinden": ""},
-    {"Titel in bestand": "Stiernummer", "Stierenkaart": "Stiernummer", "Waar te vinden": ""},
-    {"Titel in bestand": "Stiernaam", "Stierenkaart": "Stier", "Waar te vinden": ""},
-    {"Titel in bestand": "Erf-fact", "Stierenkaart": "Erf-fact", "Waar te vinden": ""},
-    {"Titel in bestand": "Vader", "Stierenkaart": "Afstamming V", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "M-vader", "Stierenkaart": "Afstamming MV", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "PFW", "Stierenkaart": "PFW", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "AAa code", "Stierenkaart": "aAa", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Betacasine", "Stierenkaart": "beta caseïne", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Kappa-caseine", "Stierenkaart": "kappa Caseïne", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Prijs", "Stierenkaart": "Prijs", "Waar te vinden": "Prijslijst"},
-    {"Titel in bestand": "Prijs gesekst", "Stierenkaart": "Prijs gesekst", "Waar te vinden": "Prijslijst"},
-    {"Titel in bestand": "Bt_1", "Stierenkaart": "% betrouwbaarheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgM", "Stierenkaart": "kg melk", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "%V", "Stierenkaart": "% vet", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "%E", "Stierenkaart": "% eiwit", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgV", "Stierenkaart": "kg vet", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgE", "Stierenkaart": "kg eiwit", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "INET", "Stierenkaart": "INET", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "NVI", "Stierenkaart": "NVI", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "TIP", "Stierenkaart": "TIP", "Waar te vinden": "Bronbestand Joop Olieman"},
-    {"Titel in bestand": "Bt_5", "Stierenkaart": "% betrouwbaar", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "F", "Stierenkaart": "frame", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "U", "Stierenkaart": "uier", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "B_6", "Stierenkaart": "benen", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Ext", "Stierenkaart": "totaal", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "HT", "Stierenkaart": "hoogtemaat", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VH", "Stierenkaart": "voorhand", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "IH", "Stierenkaart": "inhoud", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "OH", "Stierenkaart": "openheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "CS", "Stierenkaart": "conditie score", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KL", "Stierenkaart": "kruisligging", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KB", "Stierenkaart": "kruisbreedte", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BA", "Stierenkaart": "beenstand achter", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BZ", "Stierenkaart": "beenstand zij", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KH", "Stierenkaart": "klauwhoek", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VB", "Stierenkaart": "voorbeenstand", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BG", "Stierenkaart": "beengebruik", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VA", "Stierenkaart": "vooruieraanhechting", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VP", "Stierenkaart": "voorspeenplaatsing", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "SL", "Stierenkaart": "speenlengte", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "UD", "Stierenkaart": "uierdiepte", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "AH", "Stierenkaart": "achteruierhoogte", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "OB", "Stierenkaart": "ophangband", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "AP", "Stierenkaart": "achterspeenplaatsing", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Rasomschrijving", "Stierenkaart": "Ras", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Geb", "Stierenkaart": "Geboortegemak", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "MS", "Stierenkaart": "melksnelheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Cgt", "Stierenkaart": "celgetal", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Vru", "Stierenkaart": "vruchtbaarheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KA", "Stierenkaart": "karakter", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Ltrh", "Stierenkaart": "laatrijpheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Pers", "Stierenkaart": "Persistentie", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Kgh", "Stierenkaart": "klauwgezondheid", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
-]
-
-
-mapping_table_waals = [
-    {"Titel in bestand": "KI_Code", "Stierenkaart": "code centre", "Waar te vinden": ""},
-    {"Titel in bestand": "Eigenaarscode", "Stierenkaart": "Eigenaarscode", "Waar te vinden": ""},
-    {"Titel in bestand": "Stiernummer", "Stierenkaart": "Stiernummer", "Waar te vinden": ""},
-    {"Titel in bestand": "Stiernaam", "Stierenkaart": "taureau", "Waar te vinden": ""},
-    {"Titel in bestand": "Vader", "Stierenkaart": "pedigree", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "M-vader", "Stierenkaart": "pedigree", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "PFW", "Stierenkaart": "PFW", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "AAa code", "Stierenkaart": "aAa", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Betacasine", "Stierenkaart": "beta caseïne", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Kappa-caseine", "Stierenkaart": "kappa Caseïne", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Prijs", "Stierenkaart": "Tarif", "Waar te vinden": "Prijslijst"},
-    {"Titel in bestand": "Prijs gesekst", "Stierenkaart": "Tarif Sexée", "Waar te vinden": "Prijslijst"},
-    {"Titel in bestand": "Bt_1", "Stierenkaart": "%cd", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgM", "Stierenkaart": "kg lait", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "%V", "Stierenkaart": "%TB", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "%E", "Stierenkaart": "%TA", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgV", "Stierenkaart": "kgMG", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "kgE", "Stierenkaart": "kgMA", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "INET", "Stierenkaart": "INET", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "NVI", "Stierenkaart": "NVI", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "TIP", "Stierenkaart": "TIP", "Waar te vinden": "Bronbestand Joop Olieman"},
-    {"Titel in bestand": "Bt_5", "Stierenkaart": "%cd", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "F", "Stierenkaart": "frame / charpente", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "U", "Stierenkaart": "pis", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "B_6", "Stierenkaart": "membres", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Ext", "Stierenkaart": "total type", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "HT", "Stierenkaart": "hauteur sacrum", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VH", "Stierenkaart": "prof. poitrine", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "IH", "Stierenkaart": "capacité", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "OH", "Stierenkaart": "caractere laitier", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "CS", "Stierenkaart": "condition", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KL", "Stierenkaart": "inclinaison bassin", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KB", "Stierenkaart": "largeur bassin", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BA", "Stierenkaart": "assiette membres arr.", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BZ", "Stierenkaart": "angle jarret", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KH", "Stierenkaart": "klauwhoek", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VB", "Stierenkaart": "voorbeenstand", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "BG", "Stierenkaart": "beengebruik", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VA", "Stierenkaart": "vooruieraanhechting", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "VP", "Stierenkaart": "attache avant", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "SL", "Stierenkaart": "longueur trayonas av.", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "UD", "Stierenkaart": "profondeur", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "AH", "Stierenkaart": "attache arriere", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "OB", "Stierenkaart": "ligament", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "AP", "Stierenkaart": "placement trayons arriére", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Rasomschrijving", "Stierenkaart": "Ras", "Waar te vinden": "PIM K.I. SAMEN"},
-    {"Titel in bestand": "Geb", "Stierenkaart": "facilité de vêlage", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "MS", "Stierenkaart": "vitesse de traite", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Cgt", "Stierenkaart": "cellulles*", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Vru", "Stierenkaart": "fertilité", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "KA", "Stierenkaart": "caractere", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Ltrh", "Stierenkaart": "tardivité", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Pers", "Stierenkaart": "persistance", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Kgh", "Stierenkaart": "santé des pieds", "Waar te vinden": "Bronbestand CRV"},
-    {"Titel in bestand": "Lvd", "Stierenkaart": "longévité", "Waar te vinden": "Bronbestand CRV"}
-]
-
-# Voorlopige placeholders voor andere talen (pas de titels aan indien nodig)     
-mapping_table_engels  = mapping_table_nl.copy()    
-mapping_table_duits   = mapping_table_nl.copy()    
-mapping_table_canadese = mapping_table_nl.copy()  
+# Placeholder-mapping tables voor de andere talen (pas deze aan naar wens)
+mapping_table_vlaams = mapping_table_nl.copy()    # Vervang dit door de Vlaamse titels
+mapping_table_waals   = mapping_table_nl.copy()    # Vervang dit door de Waalse titels
+mapping_table_engels  = mapping_table_nl.copy()    # Vervang dit door de Engelse titels
+mapping_table_duits   = mapping_table_nl.copy()    # Vervang dit door de Duitse titels
+mapping_table_canadese = mapping_table_nl.copy()  # Vervang dit door de Canadese titels
 
 # Verzamel alle mapping tables in een dictionary
 mapping_tables = {
@@ -253,12 +135,12 @@ def create_top5_table(df):
         }
         block.append(header_row)
         
-        # Filter voor zwarte stieren: rijen waarbij Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
+        # Filter voor zwarte stieren: neem rijen waar Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
         
-        # Filter voor rode stieren: rijen waarbij Ras_clean "red holstein" bevat.
+        # Filter voor rode stieren: neem rijen waar Ras_clean "red holstein" bevat.
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -317,7 +199,7 @@ def main():
     uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
     debug_mode = st.checkbox("Activeer debug", value=False)
     
-    # Bulk-selectie: upload en bewaar in session state
+    # Bulk-selectie: upload en sla op in session state zodat deze behouden blijft
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     if bulk_file is not None:
         df_bulk = pd.read_excel(bulk_file)
@@ -412,7 +294,6 @@ def main():
                 df_stierenkaart.fillna("", inplace=True)
                 st.session_state.df_stierenkaart = df_stierenkaart
             
-            # Handmatige selectie van stieren
             if st.session_state.get("df_stierenkaart") is not None:
                 df_stierenkaart = st.session_state.df_stierenkaart
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
@@ -432,7 +313,7 @@ def main():
                         grouped_options[breed] = sorted(list(set(grouped_options[breed])))
                     order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
                     sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
-                    
+                
                     st.markdown("### Selectie per ras")
                     per_ras_selection = []
                     for breed in sorted_breeds:
