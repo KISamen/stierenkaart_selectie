@@ -68,7 +68,7 @@ mapping_table_vlaams = mapping_table_nl.copy()    # Vervang dit door de Vlaamse 
 mapping_table_waals   = mapping_table_nl.copy()    # Vervang dit door de Waalse titels
 mapping_table_engels  = mapping_table_nl.copy()    # Vervang dit door de Engelse titels
 mapping_table_duits   = mapping_table_nl.copy()    # Vervang dit door de Duitse titels
-mapping_table_canadese = mapping_table_nl.copy()  # Vervang dit door de Canadese titels
+mapping_table_canadese = mapping_table_nl.copy()   # Vervang dit door de Canadese titels
 
 # Verzamel alle mapping tables in een dictionary
 mapping_tables = {
@@ -135,12 +135,12 @@ def create_top5_table(df):
         }
         block.append(header_row)
         
-        # Filter voor zwarte stieren: neem rijen waar Ras_clean gelijk is aan "holstein zwartbont" of "holstein zwartbont + rf"
+        # Filter voor zwarte stieren
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
         
-        # Filter voor rode stieren: neem rijen waar Ras_clean "red holstein" bevat.
+        # Filter voor rode stieren
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -188,18 +188,18 @@ def main():
     Excelbestand met KI-code in kolom A.
     """)
     
-    # Laat de gebruiker kiezen welke stierenkaart (en mapping table) gebruikt moet worden.
+    # Kies taal en mapping table
     taal_keuze = st.selectbox("Kies stierenkaart taal", options=["NL", "Vlaams", "Waals", "Engels", "Duits", "Canadese"])
     selected_mapping_table = mapping_tables.get(taal_keuze, mapping_table_nl)
     
-    # Uploaders voor de vier bestanden
+    # Uploaders
     uploaded_crv = st.file_uploader("Upload Bronbestand CRV DEC2024.xlsx", type=["xlsx"], key="crv")
     uploaded_pim = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"], key="pim")
     uploaded_prijslijst = st.file_uploader("Upload Prijslijst.xlsx", type=["xlsx"], key="prijslijst")
     uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
     debug_mode = st.checkbox("Activeer debug", value=False)
     
-    # Bulk-selectie: upload en sla op in session state zodat deze behouden blijft
+    # Bulk-selectie
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     if bulk_file is not None:
         df_bulk = pd.read_excel(bulk_file)
@@ -260,10 +260,9 @@ def main():
                 else:
                     st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
                 
-                # Voeg tijdelijke key toe
+                # Voeg tijdelijke key toe en merge dataframes
                 for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                     df_temp["temp_key"] = df_temp["KI_Code"]
-                # Merge de dataframes
                 df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
                 df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
                 df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -296,11 +295,14 @@ def main():
             
             if st.session_state.get("df_stierenkaart") is not None:
                 df_stierenkaart = st.session_state.df_stierenkaart
+                # Bouw de Display-kolom op
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
                 mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
                 
-                basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()))
+                # Basisselectie
+                basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()), key="basic_selection")
                 
+                # Selectie per ras
                 with st.expander("Selecteer per ras"):
                     grouped_options = {}
                     for _, row in df_stierenkaart.iterrows():
@@ -313,7 +315,7 @@ def main():
                         grouped_options[breed] = sorted(list(set(grouped_options[breed])))
                     order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
                     sorted_breeds = sorted(grouped_options.keys(), key=lambda x: order_map.get(x, 3))
-                
+                    
                     st.markdown("### Selectie per ras")
                     per_ras_selection = []
                     for breed in sorted_breeds:
@@ -321,15 +323,20 @@ def main():
                         sel = st.multiselect(f"Selecteer stieren ({breed})", options=grouped_options[breed], key=f"ms_{breed}")
                         per_ras_selection.extend(sel)
                 
-                manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
-                bulk_selected_codes = st.session_state.bulk_selected_codes if "bulk_selected_codes" in st.session_state else []
-                combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
-                valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
+                # Met de knop voeg je (indien gewenst) de keuzes uit de basis- en per-rasselectie toe
+                if st.button("Voeg geselecteerde stieren toe"):
+                    manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
+                    manual_selected = [mapping_dict.get(code) for code in manual_selected_codes if mapping_dict.get(code)]
+                    # Combineer met reeds opgeslagen selectie (bij bulk of eerder handmatig)
+                    current_final = set(st.session_state.get("final_combined_display", []))
+                    updated_final = list(current_final.union(manual_selected))
+                    st.session_state.final_combined_display = updated_final
                 
-                # Zorg dat de gecombineerde selectie in session_state blijft staan
+                # Initialiseer de gecombineerde selectie (bij eerste run) met de bulkselectie
                 if "final_combined_display" not in st.session_state:
-                    st.session_state.final_combined_display = valid_final_display
-
+                    bulk_selected = [mapping_dict.get(code) for code in st.session_state.get("bulk_selected_codes", []) if mapping_dict.get(code)]
+                    st.session_state.final_combined_display = bulk_selected
+                
                 final_combined_display = st.multiselect(
                     "Gecombineerde selectie:",
                     options=list(mapping_dict.values()),
@@ -339,6 +346,7 @@ def main():
                 st.session_state.final_combined_display = final_combined_display
                 final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
                 
+                # Verdeel de data in geselecteerd en overige stieren
                 df_selected_filtered = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
                 df_overig = df_stierenkaart[~df_stierenkaart["KI-code"].isin(final_selected_codes)]
                 
