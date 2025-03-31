@@ -326,7 +326,17 @@ def main():
                 combined_codes = sorted(set(bulk_selected_codes + manual_selected_codes))
                 valid_final_display = [mapping_dict.get(code) for code in combined_codes if mapping_dict.get(code)]
                 
-                final_combined_display = st.multiselect("Gecombineerde selectie:", options=list(mapping_dict.values()), default=valid_final_display)
+                # Zorg dat de gecombineerde selectie in session_state blijft staan
+                if "final_combined_display" not in st.session_state:
+                    st.session_state.final_combined_display = valid_final_display
+
+                final_combined_display = st.multiselect(
+                    "Gecombineerde selectie:",
+                    options=list(mapping_dict.values()),
+                    default=st.session_state.final_combined_display,
+                    key="final_combined_display"
+                )
+                st.session_state.final_combined_display = final_combined_display
                 final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
                 
                 df_selected_filtered = df_stierenkaart[df_stierenkaart["KI-code"].isin(final_selected_codes)]
