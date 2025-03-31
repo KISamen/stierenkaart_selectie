@@ -62,11 +62,11 @@ mapping_table_nl = [
     {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
 ]
 
-mapping_table_vlaams = mapping_table_nl.copy()    
-mapping_table_waals   = mapping_table_nl.copy()    
-mapping_table_engels  = mapping_table_nl.copy()    
-mapping_table_duits   = mapping_table_nl.copy()    
-mapping_table_canadese = mapping_table_nl.copy()  
+mapping_table_vlaams = mapping_table_nl.copy()
+mapping_table_waals   = mapping_table_nl.copy()
+mapping_table_engels  = mapping_table_nl.copy()
+mapping_table_duits   = mapping_table_nl.copy()
+mapping_table_canadese = mapping_table_nl.copy()
 
 mapping_tables = {
     "NL": mapping_table_nl,
@@ -209,12 +209,27 @@ def main():
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
                 df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
                 
-                # TIP-kolom uit het Joop-bestand: er is in het bestand zowel 'Kicode' als 'TIP'
+                pfw_col = None
+                for col in df_pim.columns:
+                    if col.lower() == "pfw code":
+                        pfw_col = col
+                        break
+                if pfw_col:
+                    df_pim.rename(columns={pfw_col: "PFW"}, inplace=True)
+                    df_pim["PFW"] = df_pim["PFW"].astype(str).str.strip()
+                else:
+                    st.warning("Kolom 'PFW code' niet gevonden in het PIM-bestand.")
+                
                 tip_col = None
                 for col in df_joop.columns:
                     if col.strip().upper() == "TIP":
                         tip_col = col
                         break
+                if not tip_col:
+                    for col in df_joop.columns:
+                        if col.strip().upper().startswith("TIP"):
+                            tip_col = col
+                            break
                 if tip_col:
                     if tip_col != "TIP":
                         df_joop.rename(columns={tip_col: "TIP"}, inplace=True)
@@ -243,20 +258,10 @@ def main():
                 for mapping in mapping_table:
                     titel = mapping.get("Titel in bestand", "")
                     std_naam = mapping.get("Stierenkaart", "")
-                    # Specifieke behandeling voor TIP: check op 'TIP' en 'TIP_joop'
-                    if titel == "TIP":
-                        if titel in df_merged.columns:
-                            final_data[std_naam] = df_merged[titel]
-                        elif f"{titel}_joop" in df_merged.columns:
-                            final_data[std_naam] = df_merged[f"{titel}_joop"]
-                        else:
-                            final_data[std_naam] = ""
+                    if titel in df_merged.columns:
+                        final_data[std_naam] = df_merged[titel]
                     else:
-                        if titel in df_merged.columns:
-                            final_data[std_naam] = df_merged[titel]
-                        else:
-                            final_data[std_naam] = ""
-                
+                        final_data[std_naam] = ""
                 df_stierenkaart = pd.DataFrame(final_data)
                 df_stierenkaart.fillna("", inplace=True)
                 st.session_state.df_stierenkaart = df_stierenkaart
@@ -266,11 +271,12 @@ def main():
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
                 mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
                 
-                # Bulkselectie omzetten naar display-waarden, indien aanwezig
+                # Zorg dat bulkselectie (als display-waarden) in de gecombineerde selectie terechtkomt
                 bulk_selected_display = [mapping_dict.get(code) for code in st.session_state.get("bulk_selected_codes", []) if mapping_dict.get(code)]
                 if not st.session_state.get("final_combined_display"):
                     st.session_state.final_combined_display = bulk_selected_display
                 
+                # Formulier voor handmatige selectie
                 with st.form(key="manual_selection_form"):
                     st.subheader("Voeg handmatig stieren toe")
                     basic_selection = st.multiselect("Selecteer stieren", options=list(mapping_dict.values()), key="basic_selection")
@@ -301,6 +307,7 @@ def main():
                         updated_final = list(current_final.union(manual_selected))
                         st.session_state.final_combined_display = updated_final
                 
+                # Multiselect voor de gecombineerde selectie
                 final_combined_display = st.multiselect(
                     "Gecombineerde selectie:",
                     options=list(mapping_dict.values()),
