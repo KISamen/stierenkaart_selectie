@@ -209,7 +209,7 @@ def main():
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
                 df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
                 
-                # TIP-kolom uit het Joop-bestand: er is in het bestand zowel 'Kicode' als 'TIP'
+                # TIP-kolom uit het Joop-bestand: in het bestand staat "TIP"
                 tip_col = None
                 for col in df_joop.columns:
                     if col.strip().upper() == "TIP":
@@ -222,8 +222,11 @@ def main():
                 else:
                     st.warning("Kolom 'TIP' niet gevonden in het Joop-bestand.")
                 
+                # Voeg tijdelijke key toe voor alle dataframes
                 for df_temp in [df_crv, df_pim, df_prijslijst, df_joop]:
                     df_temp["temp_key"] = df_temp["KI_Code"]
+                
+                # Merge de dataframes
                 df_merged = pd.merge(df_crv, df_pim, on="temp_key", how="left", suffixes=("", "_pim"))
                 df_merged = pd.merge(df_merged, df_prijslijst, on="temp_key", how="left", suffixes=("", "_prijslijst"))
                 df_merged = pd.merge(df_merged, df_joop, on="temp_key", how="left", suffixes=("", "_joop"))
@@ -235,15 +238,19 @@ def main():
                 
                 if debug_mode:
                     st.write("Debug: Kolommen in df_merged:", df_merged.columns.tolist())
-                    st.write("Debug: Voorbeeld data PFW:", df_merged[["KI_Code", "PFW"]].head())
-                    st.write("Debug: Voorbeeld data TIP:", df_merged[["KI_Code", "TIP"]].head())
+                    st.write("Aantal rijen in CRV:", len(df_crv))
+                    st.write("Aantal rijen in Joop:", len(df_joop))
+                    st.write("Aantal rijen in df_merged:", len(df_merged))
+                    # Controleer hoeveel rijen een niet-lege TIP hebben:
+                    st.write("Aantal rijen met TIP (niet leeg):", df_merged["TIP"].apply(lambda x: x.strip() if isinstance(x, str) else "").astype(bool).sum())
+                    st.write("Voorbeeld TIP-waarden:", df_merged["TIP"].head())
                 
                 mapping_table = selected_mapping_table
                 final_data = {}
                 for mapping in mapping_table:
                     titel = mapping.get("Titel in bestand", "")
                     std_naam = mapping.get("Stierenkaart", "")
-                    # Specifieke behandeling voor TIP: check op 'TIP' en 'TIP_joop'
+                    # Voor TIP: check op 'TIP' en 'TIP_joop'
                     if titel == "TIP":
                         if titel in df_merged.columns:
                             final_data[std_naam] = df_merged[titel]
