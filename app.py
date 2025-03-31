@@ -79,6 +79,15 @@ mapping_tables = {
 
 # --- Einde Mapping tables ---
 
+# Functie om KI-code op te schonen; als het een float is en een heel getal, converteer dan naar int
+def clean_ki_code(x):
+    try:
+        if isinstance(x, float) and x.is_integer():
+            return str(int(x)).strip().upper()
+        return str(x).strip().upper()
+    except Exception as e:
+        return str(x).strip().upper()
+
 def load_excel(file):
     try:
         df = pd.read_excel(file)
@@ -207,7 +216,9 @@ def main():
                 df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
                 df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
-                df_joop["KI_Code"] = df_joop["Kicode"].astype(str).str.upper().str.strip()
+                
+                # Voor het Joop-bestand: gebruik de clean_ki_code functie om de .0 te verwijderen
+                df_joop["KI_Code"] = df_joop["Kicode"].apply(clean_ki_code)
                 
                 # TIP-kolom uit het Joop-bestand: in het bestand staat "TIP"
                 tip_col = None
@@ -244,7 +255,6 @@ def main():
                     st.write("KI_Code unique in CRV:", df_crv["KI_Code"].unique())
                     st.write("KI_Code unique in Joop:", df_joop["KI_Code"].unique())
                     st.write("Intersection of KI_Code:", set(df_crv["KI_Code"].unique()).intersection(set(df_joop["KI_Code"].unique())))
-                    # Controleer hoeveel rijen een niet-lege TIP hebben:
                     non_empty_tip = df_merged["TIP"].apply(lambda x: x.strip() if isinstance(x, str) else "").astype(bool).sum()
                     st.write("Aantal rijen met TIP (niet leeg):", non_empty_tip)
                     st.write("Voorbeeld TIP-waarden:", df_merged["TIP"].head())
@@ -254,7 +264,6 @@ def main():
                 for mapping in mapping_table:
                     titel = mapping.get("Titel in bestand", "")
                     std_naam = mapping.get("Stierenkaart", "")
-                    # Specifieke behandeling voor TIP: check op 'TIP' en 'TIP_joop'
                     if titel == "TIP":
                         if titel in df_merged.columns:
                             final_data[std_naam] = df_merged[titel]
@@ -277,7 +286,6 @@ def main():
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
                 mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
                 
-                # Bulkselectie omzetten naar display-waarden, indien aanwezig
                 bulk_selected_display = [mapping_dict.get(code) for code in st.session_state.get("bulk_selected_codes", []) if mapping_dict.get(code)]
                 if not st.session_state.get("final_combined_display"):
                     st.session_state.final_combined_display = bulk_selected_display
