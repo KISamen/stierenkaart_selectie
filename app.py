@@ -241,8 +241,12 @@ def main():
                     st.write("Aantal rijen in CRV:", len(df_crv))
                     st.write("Aantal rijen in Joop:", len(df_joop))
                     st.write("Aantal rijen in df_merged:", len(df_merged))
+                    st.write("KI_Code unique in CRV:", df_crv["KI_Code"].unique())
+                    st.write("KI_Code unique in Joop:", df_joop["KI_Code"].unique())
+                    st.write("Intersection of KI_Code:", set(df_crv["KI_Code"].unique()).intersection(set(df_joop["KI_Code"].unique())))
                     # Controleer hoeveel rijen een niet-lege TIP hebben:
-                    st.write("Aantal rijen met TIP (niet leeg):", df_merged["TIP"].apply(lambda x: x.strip() if isinstance(x, str) else "").astype(bool).sum())
+                    non_empty_tip = df_merged["TIP"].apply(lambda x: x.strip() if isinstance(x, str) else "").astype(bool).sum()
+                    st.write("Aantal rijen met TIP (niet leeg):", non_empty_tip)
                     st.write("Voorbeeld TIP-waarden:", df_merged["TIP"].head())
                 
                 mapping_table = selected_mapping_table
@@ -250,7 +254,7 @@ def main():
                 for mapping in mapping_table:
                     titel = mapping.get("Titel in bestand", "")
                     std_naam = mapping.get("Stierenkaart", "")
-                    # Voor TIP: check op 'TIP' en 'TIP_joop'
+                    # Specifieke behandeling voor TIP: check op 'TIP' en 'TIP_joop'
                     if titel == "TIP":
                         if titel in df_merged.columns:
                             final_data[std_naam] = df_merged[titel]
