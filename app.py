@@ -212,6 +212,14 @@ def main():
     if "df_stierenkaart" not in st.session_state:
         st.session_state.df_stierenkaart = None
     
+    # Initialiseer de gecombineerde selectie (alleen bij eerste run) met de bulkselectie
+    if "final_combined_display" not in st.session_state:
+        bulk_selected = []
+        for code in st.session_state.get("bulk_selected_codes", []):
+            # Mapping dict komt later aan de orde, dus we initialiseren hier even met lege lijst.
+            bulk_selected.append(code)
+        st.session_state.final_combined_display = bulk_selected
+    
     if st.button("Genereer Stierenkaart"):
         if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
             st.error("Upload alle bestanden!")
@@ -327,23 +335,19 @@ def main():
                 if st.button("Voeg geselecteerde stieren toe"):
                     manual_selected_codes = [item.split(" - ")[0] for item in basic_selection + per_ras_selection]
                     manual_selected = [mapping_dict.get(code) for code in manual_selected_codes if mapping_dict.get(code)]
-                    # Combineer met reeds opgeslagen selectie (bij bulk of eerder handmatig)
                     current_final = set(st.session_state.get("final_combined_display", []))
                     updated_final = list(current_final.union(manual_selected))
                     st.session_state.final_combined_display = updated_final
+                    st.experimental_rerun()
                 
-                # Initialiseer de gecombineerde selectie (bij eerste run) met de bulkselectie
-                if "final_combined_display" not in st.session_state:
-                    bulk_selected = [mapping_dict.get(code) for code in st.session_state.get("bulk_selected_codes", []) if mapping_dict.get(code)]
-                    st.session_state.final_combined_display = bulk_selected
-                
+                # Gebruik de multiselect voor de gecombineerde selectie;
+                # de widget schrijft de waarde automatisch in st.session_state["final_combined_display"]
                 final_combined_display = st.multiselect(
                     "Gecombineerde selectie:",
                     options=list(mapping_dict.values()),
                     default=st.session_state.final_combined_display,
                     key="final_combined_display"
                 )
-                st.session_state.final_combined_display = final_combined_display
                 final_selected_codes = [item.split(" - ")[0] for item in final_combined_display]
                 
                 # Verdeel de data in geselecteerd en overige stieren
