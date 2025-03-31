@@ -62,11 +62,11 @@ mapping_table_nl = [
     {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
 ]
 
-mapping_table_vlaams = mapping_table_nl.copy()    
-mapping_table_waals   = mapping_table_nl.copy()    
-mapping_table_engels  = mapping_table_nl.copy()    
-mapping_table_duits   = mapping_table_nl.copy()    
-mapping_table_canadese = mapping_table_nl.copy()  
+mapping_table_vlaams = mapping_table_nl.copy()
+mapping_table_waals   = mapping_table_nl.copy()
+mapping_table_engels  = mapping_table_nl.copy()
+mapping_table_duits   = mapping_table_nl.copy()
+mapping_table_canadese = mapping_table_nl.copy()
 
 mapping_tables = {
     "NL": mapping_table_nl,
@@ -192,12 +192,6 @@ def main():
     if "df_stierenkaart" not in st.session_state:
         st.session_state.df_stierenkaart = None
     
-    # Initialiseer de gecombineerde selectie (alleen bij de eerste run) met de bulkselectie
-    if "final_combined_display" not in st.session_state:
-        st.session_state.final_combined_display = []
-        for code in st.session_state.get("bulk_selected_codes", []):
-            st.session_state.final_combined_display.append(code)
-    
     if st.button("Genereer Stierenkaart"):
         if not (uploaded_crv and uploaded_pim and uploaded_prijslijst and uploaded_joop):
             st.error("Upload alle bestanden!")
@@ -276,6 +270,11 @@ def main():
                 df_stierenkaart = st.session_state.df_stierenkaart
                 df_stierenkaart["Display"] = df_stierenkaart["KI-code"] + " - " + df_stierenkaart["Stier"]
                 mapping_dict = dict(zip(df_stierenkaart["KI-code"], df_stierenkaart["Display"]))
+                
+                # Zorg dat bulkselectie (als display-waarden) in de gecombineerde selectie terechtkomt
+                bulk_selected_display = [mapping_dict.get(code) for code in st.session_state.get("bulk_selected_codes", []) if mapping_dict.get(code)]
+                if not st.session_state.get("final_combined_display"):
+                    st.session_state.final_combined_display = bulk_selected_display
                 
                 # Formulier voor handmatige selectie
                 with st.form(key="manual_selection_form"):
