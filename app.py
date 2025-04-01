@@ -8,7 +8,6 @@ mapping_table_nl = [
     {"Titel in bestand": "Eigenaarscode", "Stierenkaart": "Eigenaarscode", "Waar te vinden": ""},
     {"Titel in bestand": "Stiernummer", "Stierenkaart": "Stiernummer", "Waar te vinden": ""},
     {"Titel in bestand": "Stiernaam", "Stierenkaart": "Stier", "Waar te vinden": ""},
-    # Nieuwe mapping-rij voor Afkorting stier (zoeknaam) uit het PIM-bestand:
     {"Titel in bestand": "Afkorting stier (zoeknaam)", "Stierenkaart": "Afkorting stier", "Waar te vinden": "PIM K.I. SAMEN"},
     {"Titel in bestand": "Erf-fact", "Stierenkaart": "Erf-fact", "Waar te vinden": ""},
     {"Titel in bestand": "Vader", "Stierenkaart": "Afstamming V", "Waar te vinden": "Bronbestand CRV"},
