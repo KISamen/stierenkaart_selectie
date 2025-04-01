@@ -214,11 +214,23 @@ def main():
                 st.error("Fout bij laden van één of meer bestanden.")
             else:
                 df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
-                df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].astype(str).str.upper().str.strip()
+                # Pas de KI_Code in PIM ook aan met clean_ki_code
+                df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].apply(clean_ki_code)
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
-                
-                # Voor het Joop-bestand: gebruik de clean_ki_code functie om de .0 te verwijderen
+                # Gebruik ook clean_ki_code voor het Joop-bestand
                 df_joop["KI_Code"] = df_joop["Kicode"].apply(clean_ki_code)
+                
+                # Voeg PFW renaming toe voor PIM: zoek de kolom "PFW code" en hernoem deze naar "PFW"
+                pfw_col = None
+                for col in df_pim.columns:
+                    if col.lower() == "pfw code":
+                        pfw_col = col
+                        break
+                if pfw_col:
+                    df_pim.rename(columns={pfw_col: "PFW"}, inplace=True)
+                    df_pim["PFW"] = df_pim["PFW"].astype(str).str.strip()
+                else:
+                    st.warning("Kolom 'PFW code' niet gevonden in het PIM-bestand.")
                 
                 # TIP-kolom uit het Joop-bestand: in het bestand staat "TIP"
                 tip_col = None
@@ -250,9 +262,11 @@ def main():
                 if debug_mode:
                     st.write("Debug: Kolommen in df_merged:", df_merged.columns.tolist())
                     st.write("Aantal rijen in CRV:", len(df_crv))
+                    st.write("Aantal rijen in PIM:", len(df_pim))
                     st.write("Aantal rijen in Joop:", len(df_joop))
                     st.write("Aantal rijen in df_merged:", len(df_merged))
                     st.write("KI_Code unique in CRV:", df_crv["KI_Code"].unique())
+                    st.write("KI_Code unique in PIM:", df_pim["KI_Code"].unique())
                     st.write("KI_Code unique in Joop:", df_joop["KI_Code"].unique())
                     st.write("Intersection of KI_Code:", set(df_crv["KI_Code"].unique()).intersection(set(df_joop["KI_Code"].unique())))
                     non_empty_tip = df_merged["TIP"].apply(lambda x: x.strip() if isinstance(x, str) else "").astype(bool).sum()
