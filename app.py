@@ -8,6 +8,7 @@ mapping_table_nl = [
     {"Titel in bestand": "Eigenaarscode", "Stierenkaart": "Eigenaarscode", "Waar te vinden": ""},
     {"Titel in bestand": "Stiernummer", "Stierenkaart": "Stiernummer", "Waar te vinden": ""},
     {"Titel in bestand": "Stiernaam", "Stierenkaart": "Stier", "Waar te vinden": ""},
+    # Nieuwe mapping: Afkorting stier (zoeknaam) uit PIM-bestand
     {"Titel in bestand": "Afkorting stier (zoeknaam)", "Stierenkaart": "Afkorting stier", "Waar te vinden": "PIM K.I. SAMEN"},
     {"Titel in bestand": "Erf-fact", "Stierenkaart": "Erf-fact", "Waar te vinden": ""},
     {"Titel in bestand": "Vader", "Stierenkaart": "Afstamming V", "Waar te vinden": "Bronbestand CRV"},
@@ -63,7 +64,6 @@ mapping_table_nl = [
     {"Titel in bestand": "Lvd", "Stierenkaart": "levensduur", "Waar te vinden": "Bronbestand CRV"}
 ]
 
-# Placeholder-mapping tables voor de andere talen (pas deze aan naar wens)
 mapping_table_vlaams = mapping_table_nl.copy()    
 mapping_table_waals   = mapping_table_nl.copy()    
 mapping_table_engels  = mapping_table_nl.copy()    
@@ -191,6 +191,11 @@ def main():
     uploaded_joop = st.file_uploader("Upload Bronbestand Joop Olieman.xlsx", type=["xlsx"], key="joop")
     debug_mode = st.checkbox("Activeer debug", value=False)
     
+    # Reset oude prijslijst-data als er een nieuw bestand wordt geüpload
+    if uploaded_prijslijst is not None:
+        # Verwijder oude data (indien aanwezig)
+        st.session_state.df_prijslijst = None
+    
     bulk_file = st.file_uploader("Upload bulk selectie bestand (KI-code kolom A)", type=["xlsx"], key="bulk")
     if bulk_file is not None:
         df_bulk = pd.read_excel(bulk_file)
@@ -216,13 +221,12 @@ def main():
                 st.error("Fout bij laden van één of meer bestanden.")
             else:
                 df_crv["KI_Code"] = df_crv["KI-Code"].astype(str).str.upper().str.strip()
-                # Pas de KI_Code in PIM aan met clean_ki_code
+                # Gebruik clean_ki_code voor PIM en Joop om eventuele .0 achter getallen te verwijderen
                 df_pim["KI_Code"] = df_pim["Stiercode NL / KI code"].apply(clean_ki_code)
                 df_prijslijst["KI_Code"] = df_prijslijst["Artikelnr."].astype(str).str.upper().str.strip()
-                # Gebruik ook clean_ki_code voor het Joop-bestand
                 df_joop["KI_Code"] = df_joop["Kicode"].apply(clean_ki_code)
                 
-                # Voeg PFW renaming toe voor PIM: zoek de kolom "PFW code" en hernoem naar "PFW"
+                # PFW renamen in het PIM-bestand: zoek naar "PFW code" en hernoem deze naar "PFW"
                 pfw_col = None
                 for col in df_pim.columns:
                     if col.lower() == "pfw code":
