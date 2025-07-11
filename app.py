@@ -3,13 +3,12 @@ os.environ["STREAMLIT_WATCH"] = "false"
 
 import streamlit as st
 import pandas as pd
-import numpy as np
 import io
 
-# ----------------------------------------
-# 1) Mapping tables
-# ----------------------------------------
-mapping_table_nl = [
+# -------------------------------------------------------
+# Mapping table PIM (met formules)
+# -------------------------------------------------------
+mapping_table_pim = [
     {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None},
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "naam", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
@@ -65,60 +64,9 @@ mapping_table_nl = [
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
 ]
 
-mapping_table_canada = [
-    {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
-    {"Stierenkaart": "Name",    "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
-    {"Stierenkaart": "Pedigree sire",        "Titel in bestand": "Roepnaam Vader", "Formule": None},
-    {"Stierenkaart": "Pedigree mat grandsire","Titel in bestand": "Roepnaam Vaders Vader", "Formule": None},
-    {"Stierenkaart": "aAa",     "Titel in bestand": "AAa code", "Formule": None},
-    {"Stierenkaart": "prijs",   "Titel in bestand": "Prijs", "Formule": None},
-    {"Stierenkaart": "prijs gesekst", "Titel in bestand": "", "Formule": None},
-    {"Stierenkaart": "%reliability","Titel in bestand":"Official Production Evaluation in this Country %betrouwbaarheid (Productie-index)","Formule":None},
-    {"Stierenkaart": "kg milk",       "Titel in bestand": "Official Production Evalution in this Country KG Melk", "Formule": "/10"},
-    {"Stierenkaart": "%fat",          "Titel in bestand": "Offical Production Evaluation in this Country %vet", "Formule": "/100"},
-    {"Stierenkaart": "%protein",      "Titel in bestand": "Official Production Evaluation in this County %eiwit", "Formule": "/100"},
-    {"Stierenkaart": "kg fat",         "Titel in bestand": "Official Production Evaluation in this Country KG vet", "Formule": "/10"},
-    {"Stierenkaart": "kg protein",     "Titel in bestand": "Official Production Evaluation in this Country KG eiwit", "Formule": None},
-    {"Stierenkaart": "%reliability conformation traits","Titel in bestand":"%betrouwbaarheid (exterieur-index)","Formule":None},
-    {"Stierenkaart": "frame",         "Titel in bestand": "GENERAL CHARACTERISTICS frame", "Formule": "/100"},
-    {"Stierenkaart": "udder",         "Titel in bestand": "GENERAL CHARACTERISTICS uier", "Formule": "/100"},
-    {"Stierenkaart": "feet & legs",   "Titel in bestand": "GENERAL CHARACTERISTICS benen", "Formule": "/100"},
-    {"Stierenkaart": "final score",   "Titel in bestand": "GENERAL CHARACTERISTICS totaal (Exterieur-index)", "Formule": "/100"},
-    {"Stierenkaart": "stature",       "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY hoogtemaat", "Formule": "/100"},
-    {"Stierenkaart": "chestwidth",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorhand", "Formule": "/100"},
-    {"Stierenkaart": "body depth",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY inhoud", "Formule": "/100"},
-    {"Stierenkaart": "angularity",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY openheid", "Formule": "/100"},
-    {"Stierenkaart": "condition score","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY conditiescore","Formule":"/100"},
-    {"Stierenkaart": "rump angle",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY kruisligging", "Formule": "/100"},
-    {"Stierenkaart": "rump width",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY kruisbreedte", "Formule": "/100"},
-    {"Stierenkaart": "rear legs rear view","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteraanzicht benen","Formule":"/100"},
-    {"Stierenkaart": "rear leg set",  "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beenstand zij", "Formule": "/100"},
-    {"Stierenkaart": "foot angle",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY klauwhoek", "Formule": "/100"},
-    {"Stierenkaart": "front feet orientation","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorbeenstand","Formule":"/100"},
-    {"Stierenkaart": "locomotion",    "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beengebruik", "Formule": "/100"},
-    {"Stierenkaart": "fore udder attachment","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY vooruieraanhechting","Formule":"/100"},
-    {"Stierenkaart": "fore teat placement","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorspeenplaatsing","Formule":"/100"},
-    {"Stierenkaart": "teat length",   "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY speenlengte", "Formule": "/100"},
-    {"Stierenkaart": "udder depth",   "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY uierdiepte", "Formule": "/100"},
-    {"Stierenkaart": "rear udder height","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteruierhoogte","Formule":"/100"},
-    {"Stierenkaart": "central ligament","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY ophangband","Formule":"/100"},
-    {"Stierenkaart": "rear teat placement","Titel in bestand":"OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achterspeenplaatsing","Formule":"/100"},
-    {"Stierenkaart": "persistency","Titel in bestand":"","Formule":"/100"},
-    {"Stierenkaart": "calving ease","Titel in bestand":"OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY geboortegemak","Formule":"/100"},
-    {"Stierenkaart": "milking speed","Titel in bestand":"OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY melksnelheid","Formule":"/100"},
-    {"Stierenkaart": "somatic cell count","Titel in bestand":"OFFICIAL SOMATIC CELL COUNT EVALUATION IN THIS COUNTRY celgetal","Formule":"/100"},
-    {"Stierenkaart": "female fertility","Titel in bestand":"OFFICIAL FEMALE FERTILITY EVALUATION IN THIS COUNTRY vruchtbaarheid","Formule":"/100"},
-    {"Stierenkaart": "temperament","Titel in bestand":"OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY karakter","Formule":"/100"},
-    {"Stierenkaart": "maturity rate","Titel in bestand":"OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid","Formule":"/100"},
-    {"Stierenkaart": "hoofhealth","Titel in bestand":"OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid","Formule":"/100"},
-    {"Stierenkaart": "Beta caseine","Titel in bestand":"Betacasine","Formule":None},
-    {"Stierenkaart": "Kappa caseine","Titel in bestand":"Kappa-caseine","Formule":None},
-    {"Stierenkaart": "Superbevruchter","Titel in bestand":"Superbevruchter","Formule":None}
-]
-
-# ----------------------------------------
-# 2) Hulpfuncties
-# ----------------------------------------
+# -------------------------------------------------------
+# Excel inlezen
+# -------------------------------------------------------
 def load_excel(file):
     try:
         df = pd.read_excel(file)
@@ -128,107 +76,173 @@ def load_excel(file):
         st.error(f"Fout bij laden Excel: {e}")
         return None
 
+# -------------------------------------------------------
+# Stieren sorteren
+# -------------------------------------------------------
 def custom_sort_ras(df):
     if "Ras" not in df.columns:
-        return df
-    naam_col = "naam" if "naam" in df.columns else ("Name" if "Name" in df.columns else None)
+        df["Ras"] = ""
+    if "naam" not in df.columns:
+        df["naam"] = ""
     order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
     df["ras_sort"] = df["Ras"].map(order_map).fillna(3)
-    df_sorted = df.sort_values(by=["ras_sort", naam_col], ascending=True)
+    df_sorted = df.sort_values(by=["ras_sort", "naam"], ascending=True)
     df_sorted.drop(columns=["ras_sort"], inplace=True)
     return df_sorted
 
+# -------------------------------------------------------
+# Top 5-tabellen maken
+# -------------------------------------------------------
 def create_top5_table(df):
-    fokwaarden = ["geboortegemak","celgetal","vruchtbaarheid","klauwgezondheid","uier","benen"]
+    fokwaarden = ["geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
-    if "Ras" not in df.columns:
+    if df.empty:
         return pd.DataFrame()
-    df_nl = df[df["Ras"].isin(["Holstein zwartbont","Holstein zwartbont + RF","Red Holstein"])].copy()
+    df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
+    df = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf", "red holstein"])].copy()
     for fok in fokwaarden:
-        header = {"Fokwaarde":fok,"zwartbont_stier":"Stier","zwartbont_value":"Waarde","roodbont_stier":"Stier","roodbont_value":"Waarde"}
-        blocks.append(header)
-        df_z = df_nl[df_nl["Ras"]=="Holstein zwartbont"].copy()
-        df_r = df_nl[df_nl["Ras"]=="Red Holstein"].copy()
-        for grp, cols in [(df_z,("zwartbont_stier","zwartbont_value")), (df_r,("roodbont_stier","roodbont_value"))]:
-            grp[fok]=pd.to_numeric(grp[fok],errors="coerce")
-            grp=grp.sort_values(by=fok,ascending=False).head(5)
-            for _,row in grp.iterrows():
-                blocks.append({"Fokwaarde":"", cols[0]:str(row[naam_col]), cols[1]:str(row[fok]), **{k:"" for k in header if k not in cols}})
-        blocks.append({k:"" for k in header})
+        if fok not in df.columns:
+            df[fok] = pd.NA
+        block = []
+        header_row = {
+            "Fokwaarde": fok,
+            "zwartbont_stier": "Stier",
+            "zwartbont_value": "Waarde",
+            "roodbont_stier": "Stier",
+            "roodbont_value": "Waarde"
+        }
+        block.append(header_row)
+        df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
+        df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
+        df_z = df_z.sort_values(by=fok, ascending=False)
+        df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
+        df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
+        df_r = df_r.sort_values(by=fok, ascending=False)
+        for i in range(5):
+            row = {
+                "Fokwaarde": "",
+                "zwartbont_stier": "",
+                "zwartbont_value": "",
+                "roodbont_stier": "",
+                "roodbont_value": ""
+            }
+            if i < len(df_z):
+                row["zwartbont_stier"] = str(df_z.iloc[i]["naam"])
+                row["zwartbont_value"] = str(df_z.iloc[i][fok])
+            if i < len(df_r):
+                row["roodbont_stier"] = str(df_r.iloc[i]["naam"])
+                row["roodbont_value"] = str(df_r.iloc[i][fok])
+            block.append(row)
+        block.append({
+            "Fokwaarde": "",
+            "zwartbont_stier": "",
+            "zwartbont_value": "",
+            "roodbont_stier": "",
+            "roodbont_value": ""
+        })
+        blocks.extend(block)
     return pd.DataFrame(blocks)
 
-# ----------------------------------------
-# 3) Main
-# ----------------------------------------
+# -------------------------------------------------------
+# Streamlit main
+# -------------------------------------------------------
 def main():
     st.set_page_config(layout="wide")
-    st.title("Stierenkaart Generator")
+    st.title("Stierenkaart Generator (PIM versie, met formules)")
 
-    taal = st.selectbox("Kies stierenkaart type:",["Nederland","Canada"])
-    mapping_table = mapping_table_nl if taal=="Nederland" else mapping_table_canada
+    uploaded_file = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
 
-    uploaded = st.file_uploader("Upload PIM (.xlsx)",type=["xlsx"])
-    if not uploaded:
-        return
-    df = load_excel(uploaded)
-    if df is None:
-        return
+    if uploaded_file:
+        df_raw = load_excel(uploaded_file)
+        if df_raw is not None:
+            st.success(f"Bestand ingelezen met {len(df_raw)} rijen en {len(df_raw.columns)} kolommen.")
+            if st.checkbox("Toon kolomnamen"):
+                st.write(df_raw.columns.tolist())
 
-    # 3.1 Mappen & schoonmaken
-    data = {}
-    for m in mapping_table:
-        out=m["Stierenkaart"]; src=m["Titel in bestand"]; f=m["Formule"]
-        if src and src in df.columns:
-            col=df[src].replace([99999,"+999"],pd.NA)
-            if f: 
-                col=pd.to_numeric(col,errors="coerce")
-                col = col/10 if f=="/10" else col/100
-            data[out]=col.astype(str).replace("nan","")
+            final_data = {}
+            for mapping in mapping_table_pim:
+                titel = mapping["Titel in bestand"]
+                std_naam = mapping["Stierenkaart"]
+                formule = mapping["Formule"]
+                if titel and titel in df_raw.columns:
+                    kolom = df_raw[titel]
+                    kolom = kolom.replace([99999, "+999"], pd.NA)
+                    if formule:
+                        try:
+                            kolom = pd.to_numeric(kolom, errors="coerce")
+                            if formule == "/10":
+                                kolom = kolom / 10
+                            elif formule == "/100":
+                                kolom = kolom / 100
+                        except Exception as e:
+                            st.warning(f"Kon formule toepassen op kolom {titel}: {e}")
+                    final_data[std_naam] = kolom
+                else:
+                    final_data[std_naam] = ""
+
+            df_mapped = pd.DataFrame(final_data)
+
+            # Voeg pinkenstier toe
+            if "geboortegemak" in df_mapped.columns:
+                df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
+                    lambda x: "p" if pd.notna(x) and x > 100 else ""
+                )
+            else:
+                df_mapped["pinkenstier"] = ""
+
+            # Kolomvolgorde
+            kolomvolgorde = [
+                "superbevruchter",
+                "ki-code",
+                "naam",
+                "pinkenstier"
+            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter","ki-code","naam")]
+
+            bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
+            overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
+            df_mapped = df_mapped[bestaande_kolommen + overige_kolommen]
+
+            if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
+                df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+                df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
+
+                selected_display = st.multiselect(
+                    "Selecteer stieren:",
+                    options=df_mapped["Display"].tolist()
+                )
+
+                if selected_display:
+                    selected_codes = [x.split(" - ")[0] for x in selected_display]
+                    df_selected = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
+                    df_selected = custom_sort_ras(df_selected)
+                    st.subheader("Geselecteerde stieren")
+                    st.dataframe(df_selected, use_container_width=True)
+
+                    df_top5 = create_top5_table(df_selected)
+                    if not df_top5.empty:
+                        st.subheader("Top 5-tabellen per fokwaarde")
+                        st.dataframe(df_top5, use_container_width=True)
+
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                        df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
+                        if not df_top5.empty:
+                            df_top5.to_excel(writer, sheet_name='Top5_per_ras', index=False)
+
+                    st.download_button(
+                        label="Download selectie + Top 5-tabellen",
+                        data=output.getvalue(),
+                        file_name="stierenkaart_selectie.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                else:
+                    st.info("Selecteer één of meer stieren om de gegevens te zien en te downloaden.")
+            else:
+                st.warning("Kolommen 'ki-code' en/of 'naam' ontbreken in de gemapte data.")
         else:
-            data[out]=[""]*len(df)
-
-    df_map=pd.DataFrame(data)
-
-    # 3.2 pinkenstier (NL)
-    if taal=="Nederland" and "geboortegemak" in df_map:
-        df_map["pinkenstier"]=df_map["geboortegemak"].astype(float).apply(lambda x: "p" if x>1 else "")
+            st.error("Kon het bestand niet inlezen.")
     else:
-        df_map["pinkenstier"]=""
+        st.info("Upload eerst het PIM-bestand.")
 
-    # 3.3 kolomnamen
-    naam_col = "naam" if taal=="Nederland" else "Name"
-    ki_col   = "ki-code"
-
-    # 3.4 volgorde
-    volg=[ "superbevruchter", ki_col, naam_col, "pinkenstier"] + [m["Stierenkaart"] for m in mapping_table if m["Stierenkaart"] not in ["superbevruchter",ki_col,naam_col]]
-    volg=[c for c in volg if c in df_map]
-    overige=[c for c in df_map if c not in volg]
-    df_map=df_map[volg+overige]
-
-    # 3.5 Display
-    if ki_col in df_map and naam_col in df_map:
-        df_map["Display"]=df_map[ki_col]+" - "+df_map[naam_col]
-        keuze=st.multiselect("Selecteer stieren", df_map["Display"])
-        if keuze:
-            codes=[x.split(" - ")[0] for x in keuze]
-            sel=df_map[df_map[ki_col].isin(codes)].copy()
-            sel=custom_sort_ras(sel)
-            st.dataframe(sel,use_container_width=True)
-            # top5
-            if taal=="Nederland":
-                top5=create_top5_table(sel)
-                st.subheader("Top 5 per ras")
-                st.dataframe(top5,use_container_width=True)
-            buf=io.BytesIO()
-            with pd.ExcelWriter(buf,engine="openpyxl") as w:
-                sel.to_excel(w,sheet_name="Stierenkaart",index=False)
-                if taal=="Nederland":
-                    top5.to_excel(w,sheet_name="Top5",index=False)
-            st.download_button("Download Excel",data=buf.getvalue(),file_name="stierenkaart.xlsx")
-        else:
-            st.info("Selecteer stieren om te tonen.")
-    else:
-        st.warning(f"Kolommen {ki_col!r} en/of {naam_col!r} ontbreken.")
-
-if __name__=="__main__":
+if __name__ == "__main__":
     main()
