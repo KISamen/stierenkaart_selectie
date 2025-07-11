@@ -256,12 +256,19 @@ def main():
     if regio == "Canada" and "Name" in df_mapped.columns:
         df_mapped["Name"] = df_mapped["Name"].astype(str)
 
-    # Display-kolom aanmaken
-    if regio == "Nederland" and "naam" in df_mapped.columns:
-        df_mapped["naam"] = df_mapped["naam"].astype(str)
-        df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"]
-    elif regio == "Canada" and "Name" in df_mapped.columns:
-        df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["Name"]
+    # Display-kolom aanmaken, alleen als de benodigde kolom er is
+    if "ki-code" in df_mapped.columns and (
+       (regio == "Nederland" and "naam" in df_mapped.columns) or
+       (regio == "Canada" and "Name" in df_mapped.columns)
+    ):
+        if regio == "Nederland":
+            df_mapped["naam"] = df_mapped["naam"].astype(str)
+            df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"]
+        else:
+            df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["Name"]
+    else:
+        st.warning("Kolommen voor KI-code + naam ontbreken in de gemapte data.")
+        return
 
     # Kolomvolgorde en bestandsnaam per regio
     if regio == "Nederland":
@@ -293,38 +300,36 @@ def main():
     overige  = [c for c in df_mapped.columns if c not in bestaande]
     df_mapped = df_mapped[bestaande + overige]
 
-    # Display & selectie
-    if "Display" in df_mapped.columns:
-        selected = st.multiselect("Selecteer stieren:", options=df_mapped["Display"])
-        if selected:
-            selected_codes = [s.split(" - ")[0] for s in selected]
-            df_sel = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
-            df_sel = custom_sort_ras(df_sel)
-            st.subheader("Geselecteerde stieren")
-            st.dataframe(df_sel, use_container_width=True)
+    # Selectie en download
+    selected = st.multiselect("Selecteer stieren:", options=df_mapped["Display"])
+    if not selected:
+        st.info("Selecteer minstens één stier om de data te tonen en te downloaden.")
+        return
 
-            df_top5 = create_top5_table(df_sel)
-            if not df_top5.empty:
-                st.subheader("Top 5-tabellen per fokwaarde")
-                st.dataframe(df_top5, use_container_width=True)
+    selected_codes = [s.split(" - ")[0] for s in selected]
+    df_sel = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
+    df_sel = custom_sort_ras(df_sel)
+    st.subheader("Geselecteerde stieren")
+    st.dataframe(df_sel, use_container_width=True)
 
-            # Excel schrijven & downloaden
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df_sel.to_excel(writer, sheet_name="Stierenkaart", index=False)
-                if not df_top5.empty:
-                    df_top5.to_excel(writer, sheet_name="Top5_per_ras", index=False)
+    df_top5 = create_top5_table(df_sel)
+    if not df_top5.empty:
+        st.subheader("Top 5-tabellen per fokwaarde")
+        st.dataframe(df_top5, use_container_width=True)
 
-            st.download_button(
-                label="Download selectie + Top 5-tabellen",
-                data=output.getvalue(),
-                file_name=output_fname,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.info("Selecteer minstens één stier om de data te tonen en te downloaden.")
-    else:
-        st.warning("Kolommen 'ki-code' en/of de naam-kolom ontbreken in de gemapte data.")
+    # Excel schrijven & downloaden
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df_sel.to_excel(writer, sheet_name="Stierenkaart", index=False)
+        if not df_top5.empty:
+            df_top5.to_excel(writer, sheet_name="Top5_per_ras", index=False)
+
+    st.download_button(
+        label="Download selectie + Top 5-tabellen",
+        data=output.getvalue(),
+        file_name=output_fname,
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 if __name__ == "__main__":
     main()
