@@ -12,7 +12,6 @@ mapping_table_pim = [
     {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None},
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "naam", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
-    {"Stierenkaart": "pinkenstier", "Titel in bestand": "p wanneer geboortegemak > 100", "Formule": None},
     {"Stierenkaart": "vader", "Titel in bestand": "Roepnaam Vader", "Formule": None},
     {"Stierenkaart": "vaders vader", "Titel in bestand": "Roepnaam Moeders Vader", "Formule": None},
     {"Stierenkaart": "PFW", "Titel in bestand": "PFW code", "Formule": None},
@@ -211,6 +210,14 @@ def main():
                     final_data[std_naam] = ""
 
             df_mapped = pd.DataFrame(final_data)
+
+            # Voeg pinkenstier toe
+            if "geboortegemak" in df_mapped.columns:
+                df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
+                    lambda x: "p" if pd.notna(x) and x > 100 else ""
+                )
+            else:
+                df_mapped["pinkenstier"] = ""
 
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
                 df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
