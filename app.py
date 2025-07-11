@@ -94,30 +94,15 @@ def custom_sort_ras(df):
 # Top 5-tabellen maken
 # -------------------------------------------------------
 def create_top5_table(df):
-    fokwaarden = [
-        "geboortegemak",
-        "celgetal",
-        "vruchtbaarheid",
-        "klauwgezondheid",
-        "uier",
-        "benen"
-    ]
-
+    fokwaarden = ["geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
     blocks = []
     if df.empty:
         return pd.DataFrame()
-
     df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
-    df = df[df["Ras_clean"].isin([
-        "holstein zwartbont",
-        "holstein zwartbont + rf",
-        "red holstein"
-    ])].copy()
-
+    df = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf", "red holstein"])].copy()
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
-
         block = []
         header_row = {
             "Fokwaarde": fok,
@@ -127,15 +112,12 @@ def create_top5_table(df):
             "roodbont_value": "Waarde"
         }
         block.append(header_row)
-
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
-
         for i in range(5):
             row = {
                 "Fokwaarde": "",
@@ -151,7 +133,6 @@ def create_top5_table(df):
                 row["roodbont_stier"] = str(df_r.iloc[i]["naam"])
                 row["roodbont_value"] = str(df_r.iloc[i][fok])
             block.append(row)
-
         block.append({
             "Fokwaarde": "",
             "zwartbont_stier": "",
@@ -159,9 +140,7 @@ def create_top5_table(df):
             "roodbont_stier": "",
             "roodbont_value": ""
         })
-
         blocks.extend(block)
-
     return pd.DataFrame(blocks)
 
 # -------------------------------------------------------
@@ -175,10 +154,8 @@ def main():
 
     if uploaded_file:
         df_raw = load_excel(uploaded_file)
-
         if df_raw is not None:
             st.success(f"Bestand ingelezen met {len(df_raw)} rijen en {len(df_raw.columns)} kolommen.")
-
             if st.checkbox("Toon kolomnamen"):
                 st.write(df_raw.columns.tolist())
 
@@ -187,14 +164,9 @@ def main():
                 titel = mapping["Titel in bestand"]
                 std_naam = mapping["Stierenkaart"]
                 formule = mapping["Formule"]
-
                 if titel and titel in df_raw.columns:
                     kolom = df_raw[titel]
-
-                    # vervang 99999 en "+999" door NaN
                     kolom = kolom.replace([99999, "+999"], pd.NA)
-
-                    # Formule toepassen
                     if formule:
                         try:
                             kolom = pd.to_numeric(kolom, errors="coerce")
@@ -204,7 +176,6 @@ def main():
                                 kolom = kolom / 100
                         except Exception as e:
                             st.warning(f"Kon formule toepassen op kolom {titel}: {e}")
-
                     final_data[std_naam] = kolom
                 else:
                     final_data[std_naam] = ""
@@ -219,6 +190,18 @@ def main():
             else:
                 df_mapped["pinkenstier"] = ""
 
+            # Kolomvolgorde
+            kolomvolgorde = [
+                "superbevruchter",
+                "ki-code",
+                "naam",
+                "pinkenstier"
+            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter","ki-code","naam")]
+
+            bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
+            overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
+            df_mapped = df_mapped[bestaande_kolommen + overige_kolommen]
+
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
                 df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
                 df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
@@ -231,9 +214,7 @@ def main():
                 if selected_display:
                     selected_codes = [x.split(" - ")[0] for x in selected_display]
                     df_selected = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
-
                     df_selected = custom_sort_ras(df_selected)
-
                     st.subheader("Geselecteerde stieren")
                     st.dataframe(df_selected, use_container_width=True)
 
@@ -242,7 +223,6 @@ def main():
                         st.subheader("Top 5-tabellen per fokwaarde")
                         st.dataframe(df_top5, use_container_width=True)
 
-                    # Excel download
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
