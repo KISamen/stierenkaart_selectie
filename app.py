@@ -61,7 +61,7 @@ mapping_table_pim = [
     {"Stierenkaart": "laatrijpheid",                      "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid",           "Formule": "/100"},
     {"Stierenkaart": "persistentie",                      "Titel in bestand": "",                                                                                       "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid",                   "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid",   "Formule": "/100"},
-    {"Stierenkaart": "levensduur",                        "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur",   "Formule": "/100"}
+    {"Stierenkaart": "levensduur",                        "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur",   "Formule": "/100"},
 ]
 
 # -------------------------------------------------------
@@ -96,7 +96,7 @@ mapping_table_ca = [
     {"Stierenkaart": "rear legs rear view",                   "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteraanzicht benen",             "Formule": "/100"},
     {"Stierenkaart": "rear leg set",                          "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beenstand zij",                        "Formule": "/100"},
     {"Stierenkaart": "foot angle",                            "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY klauwhoek",                           "Formule": "/100"},
-    {"Stierenkaart": "front feet orientation",                "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorbeenstand",                      "Formule": "/100"},
+    {"Stierenkaart": "front feet orientation",                "Titel in bestand"]: "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorbeenstand",                      "Formule": "/100"},  # let op de extra ] bij 'Titel in bestand'
     {"Stierenkaart": "locomotion",                            "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beengebruik",                          "Formule": "/100"},
     {"Stierenkaart": "fore udder attachment",                 "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY vooruieraanhechting",                "Formule": "/100"},
     {"Stierenkaart": "fore teat placement",                   "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorspeenplaatsing",                "Formule": "/100"},
@@ -190,48 +190,49 @@ def main():
     if df_raw is None:
         return
 
-    # Mapping met foutmelding per missende key
+    # Mapping mét veilige get() om nooit KeyError te krijgen
     final_data = {}
-    for i, m in enumerate(mapping_table):
-        try:
-            std          = m["Stierenkaart"]
-            kolom_titel  = m["Titel in bestand"]
-            formule      = m["Formule"]
-        except KeyError as e:
-            st.error(f"Mapping entry {i} mist key {e}: {m}")
+    for m in mapping_table:
+        std          = m.get("Stierenkaart")
+        kolom_titel  = m.get("Titel in bestand","")
+        formule      = m.get("Formule",None)
+
+        if std is None:
+            st.error(f"Found mapping entry without 'Stierenkaart': {m}")
             continue
 
         if kolom_titel and kolom_titel in df_raw.columns:
             col = df_raw[kolom_titel].replace([99999,"+999"], pd.NA)
             if formule:
                 col = pd.to_numeric(col, errors="coerce")
-                if formule=="/10":
-                    col = col/10
-                elif formule=="/100":
-                    col = col/100
+                if formule == "/10":
+                    col = col / 10
+                elif formule == "/100":
+                    col = col / 100
             final_data[std] = col
         else:
             final_data[std] = ""
 
     df_mapped = pd.DataFrame(final_data)
 
-    # Alleen voor Nederland: pinkenstier markeren
-    if regio=="Nederland" and "geboortegemak" in df_mapped:
+    # Alleen voor NL: pinkenstier
+    if regio=="Nederland" and "geboortegemak" in df_mapped.columns:
         df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(lambda x: "p" if pd.notna(x) and x>100 else "")
 
-    # Zet ki-code en Name om naar strings vóór .str-accessors
-    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
-    if regio=="Canada" and "Name" in df_mapped:
+    # Zet ki-code en Name om naar strings vóór .str
+    if "ki-code" in df_mapped.columns:
+        df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+    if regio=="Canada" and "Name" in df_mapped.columns:
         df_mapped["Name"] = df_mapped["Name"].astype(str)
 
-    # Display-kolom aanmaken
-    if regio=="Nederland" and "naam" in df_mapped:
+    # Display-kolom
+    if regio=="Nederland" and "naam" in df_mapped.columns:
         df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
-    elif regio=="Canada":
-        if "Name" not in df_mapped:
-            st.error("Voor Canada ontbreekt kolom 'Name' na mappen.")
-            return
+    elif regio=="Canada" and "Name" in df_mapped.columns:
         df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["Name"]
+    else:
+        st.warning("Ontbrekende kolommen voor Display (ki-code + naam/Name).")
+        return
 
     # Kolomvolgorde en bestandsnaam
     if regio=="Nederland":
@@ -248,10 +249,10 @@ def main():
     rest     = [c for c in df_mapped.columns if c not in bestaand]
     df_mapped = df_mapped[bestaand + rest]
 
-    # Selectie en tonen
+    # Selectie & preview
     keuze = st.multiselect("Selecteer stieren:", df_mapped["Display"])
     if not keuze:
-        st.info("Selecteer minimaal één stier om te tonen en te downloaden.")
+        st.info("Selecteer minimaal één stier.")
         return
 
     codes = [k.split(" - ")[0] for k in keuze]
@@ -265,7 +266,7 @@ def main():
         st.subheader("Top 5-tabellen per fokwaarde")
         st.dataframe(df_top5, use_container_width=True)
 
-    # Excel schrijven en downloaden
+    # Download
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as writer:
         df_sel.to_excel(writer, sheet_name="Stierenkaart", index=False)
