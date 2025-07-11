@@ -6,8 +6,9 @@ import pandas as pd
 import io
 
 # -------------------------------------------------------
-# Mapping table PIM
+# Mapping table PIM (volgens jouw laatste schema)
 # -------------------------------------------------------
+
 mapping_table_pim = [
     {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter"},
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code"},
@@ -195,7 +196,6 @@ def main():
 
             df_mapped = pd.DataFrame(final_data)
 
-            # Bouw display kolom
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
                 df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
                 df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
