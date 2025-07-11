@@ -9,12 +9,12 @@ import io
 # Mapping table PIM (met formules)
 # -------------------------------------------------------
 mapping_table_pim = [
-     {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None},
+    {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None},
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "naam", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
     {"Stierenkaart": "pinkenstier", "Titel in bestand": "p wanneer geboortegemak > 100", "Formule": None},
     {"Stierenkaart": "vader", "Titel in bestand": "Roepnaam Vader", "Formule": None},
-    {"Stierenkaart": "moeders vader", "Titel in bestand": "Roepnaam Moeders Vader", "Formule": None},
+    {"Stierenkaart": "vaders vader", "Titel in bestand": "Roepnaam Moeders Vader", "Formule": None},
     {"Stierenkaart": "PFW", "Titel in bestand": "PFW code", "Formule": None},
     {"Stierenkaart": "aAa", "Titel in bestand": "AAa code", "Formule": None},
     {"Stierenkaart": "Beta caseine", "Titel in bestand": "Betacasine", "Formule": None},
@@ -60,11 +60,10 @@ mapping_table_pim = [
     {"Stierenkaart": "vruchtbaarheid", "Titel in bestand": "OFFICIAL FEMALE FERTILITY EVALUATION IN THIS COUNTRY vruchtbaarheid", "Formule": "/100"},
     {"Stierenkaart": "karakter", "Titel in bestand": "OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY karakter", "Formule": "/100"},
     {"Stierenkaart": "laatrijpheid", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid", "Formule": "/100"},
-    {"Stierenkaart": "persistentie", "Titel in bestand": "Persistentie", "Formule": "/100"},
+    {"Stierenkaart": "persistentie", "Titel in bestand": "", "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
 ]
-
 
 # -------------------------------------------------------
 # Excel inlezen
@@ -192,6 +191,9 @@ def main():
 
                 if titel and titel in df_raw.columns:
                     kolom = df_raw[titel]
+
+                    # vervang 99999 en "+999" door NaN
+                    kolom = kolom.replace([99999, "+999"], pd.NA)
 
                     # Formule toepassen
                     if formule:
