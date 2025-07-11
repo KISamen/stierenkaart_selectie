@@ -6,9 +6,9 @@ import pandas as pd
 import io
 
 # -------------------------------------------------------
-# Mapping table PIM (met formules)
+# Mapping table NL
 # -------------------------------------------------------
-mapping_table_pim = [
+mapping_table_nl = [
     {"Stierenkaart": "superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None},
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "naam", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
@@ -59,13 +59,21 @@ mapping_table_pim = [
     {"Stierenkaart": "vruchtbaarheid", "Titel in bestand": "OFFICIAL FEMALE FERTILITY EVALUATION IN THIS COUNTRY vruchtbaarheid", "Formule": "/100"},
     {"Stierenkaart": "karakter", "Titel in bestand": "OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY karakter", "Formule": "/100"},
     {"Stierenkaart": "laatrijpheid", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid", "Formule": "/100"},
-    {"Stierenkaart": "persistentie", "Titel in bestand": "Persistentie", "Formule": "/100"},
+    {"Stierenkaart": "persistentie", "Titel in bestand": "", "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
-    {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": ""}
+    {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
+]
+
+# Mapping table Canada (voorbeeld)
+mapping_table_canada = [
+    {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
+    {"Stierenkaart": "Name", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
+    {"Stierenkaart": "Pedigree", "Titel in bestand": "Roepnaam Vader", "Formule": None},
+    # voeg hier je Canadese velden toe zoals nodig
 ]
 
 # -------------------------------------------------------
-# Excel inlezen
+# Excel laden
 # -------------------------------------------------------
 def load_excel(file):
     try:
@@ -94,15 +102,30 @@ def custom_sort_ras(df):
 # Top 5-tabellen maken
 # -------------------------------------------------------
 def create_top5_table(df):
-    fokwaarden = ["geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
+    fokwaarden = [
+        "geboortegemak",
+        "celgetal",
+        "vruchtbaarheid",
+        "klauwgezondheid",
+        "uier",
+        "benen"
+    ]
+
     blocks = []
     if df.empty:
         return pd.DataFrame()
+
     df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
-    df = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf", "red holstein"])].copy()
+    df = df[df["Ras_clean"].isin([
+        "holstein zwartbont",
+        "holstein zwartbont + rf",
+        "red holstein"
+    ])].copy()
+
     for fok in fokwaarden:
         if fok not in df.columns:
             df[fok] = pd.NA
+
         block = []
         header_row = {
             "Fokwaarde": fok,
@@ -112,12 +135,15 @@ def create_top5_table(df):
             "roodbont_value": "Waarde"
         }
         block.append(header_row)
+
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
+
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
+
         for i in range(5):
             row = {
                 "Fokwaarde": "",
@@ -133,6 +159,7 @@ def create_top5_table(df):
                 row["roodbont_stier"] = str(df_r.iloc[i]["naam"])
                 row["roodbont_value"] = str(df_r.iloc[i][fok])
             block.append(row)
+
         block.append({
             "Fokwaarde": "",
             "zwartbont_stier": "",
@@ -140,50 +167,50 @@ def create_top5_table(df):
             "roodbont_stier": "",
             "roodbont_value": ""
         })
+
         blocks.extend(block)
+
     return pd.DataFrame(blocks)
 
 # -------------------------------------------------------
-# Streamlit main
+# Main
 # -------------------------------------------------------
 def main():
     st.set_page_config(layout="wide")
-    st.title("Stierenkaart Generator (PIM versie, met formules)")
+    st.title("Stierenkaart Generator")
 
-    uploaded_file = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
+    # Taalkeuze
+    taal = st.selectbox("Kies stierenkaart type:", ["Nederland", "Canada"])
 
+    mapping_table = mapping_table_nl if taal == "Nederland" else mapping_table_canada
+
+    uploaded_file = st.file_uploader("Upload Excel bestand", type=["xlsx"])
     if uploaded_file:
         df_raw = load_excel(uploaded_file)
-        if df_raw is not None:
-            st.success(f"Bestand ingelezen met {len(df_raw)} rijen en {len(df_raw.columns)} kolommen.")
-            if st.checkbox("Toon kolomnamen"):
-                st.write(df_raw.columns.tolist())
 
+        if df_raw is not None:
             final_data = {}
-            for mapping in mapping_table_pim:
+            for mapping in mapping_table:
                 titel = mapping["Titel in bestand"]
                 std_naam = mapping["Stierenkaart"]
                 formule = mapping["Formule"]
+
                 if titel and titel in df_raw.columns:
-                    kolom = df_raw[titel]
-                    kolom = kolom.replace([99999, "+999"], pd.NA)
+                    kolom = df_raw[titel].replace([99999, "+999"], pd.NA)
                     if formule:
-                        try:
-                            kolom = pd.to_numeric(kolom, errors="coerce")
-                            if formule == "/10":
-                                kolom = kolom / 10
-                            elif formule == "/100":
-                                kolom = kolom / 100
-                        except Exception as e:
-                            st.warning(f"Kon formule toepassen op kolom {titel}: {e}")
+                        kolom = pd.to_numeric(kolom, errors="coerce")
+                        if formule == "/10":
+                            kolom = kolom / 10
+                        elif formule == "/100":
+                            kolom = kolom / 100
                     final_data[std_naam] = kolom
                 else:
                     final_data[std_naam] = ""
 
             df_mapped = pd.DataFrame(final_data)
 
-            # Voeg pinkenstier toe
-            if "geboortegemak" in df_mapped.columns:
+            # pinkenstier berekenen (alleen NL)
+            if taal == "Nederland" and "geboortegemak" in df_mapped.columns:
                 df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
                     lambda x: "p" if pd.notna(x) and x > 100 else ""
                 )
@@ -191,37 +218,30 @@ def main():
                 df_mapped["pinkenstier"] = ""
 
             # Kolomvolgorde
-            kolomvolgorde = [
-                "superbevruchter",
-                "ki-code",
-                "naam",
-                "pinkenstier"
-            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter","ki-code","naam")]
+            kolomvolgorde = ["superbevruchter","ki-code","naam","pinkenstier"] + \
+                [x["Stierenkaart"] for x in mapping_table if x["Stierenkaart"] not in ["superbevruchter","ki-code","naam"]]
+            kolomvolgorde = [x for x in kolomvolgorde if x in df_mapped.columns]
 
-            bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
-            overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
-            df_mapped = df_mapped[bestaande_kolommen + overige_kolommen]
+            overige_kolommen = [c for c in df_mapped.columns if c not in kolomvolgorde]
+            df_mapped = df_mapped[kolomvolgorde + overige_kolommen]
 
+            # Voeg Display toe
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
-                df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
-                df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
+                df_mapped["Display"] = df_mapped["ki-code"].astype(str) + " - " + df_mapped["naam"].astype(str)
 
-                selected_display = st.multiselect(
-                    "Selecteer stieren:",
-                    options=df_mapped["Display"].tolist()
-                )
-
+                selected_display = st.multiselect("Selecteer stieren:", df_mapped["Display"].tolist())
                 if selected_display:
                     selected_codes = [x.split(" - ")[0] for x in selected_display]
                     df_selected = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
                     df_selected = custom_sort_ras(df_selected)
-                    st.subheader("Geselecteerde stieren")
-                    st.dataframe(df_selected, use_container_width=True)
 
+                    st.dataframe(df_selected)
+
+                    # Top 5 tabellen
                     df_top5 = create_top5_table(df_selected)
                     if not df_top5.empty:
-                        st.subheader("Top 5-tabellen per fokwaarde")
-                        st.dataframe(df_top5, use_container_width=True)
+                        st.subheader("Top 5 tabellen")
+                        st.dataframe(df_top5)
 
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -229,20 +249,13 @@ def main():
                         if not df_top5.empty:
                             df_top5.to_excel(writer, sheet_name='Top5_per_ras', index=False)
 
-                    st.download_button(
-                        label="Download selectie + Top 5-tabellen",
-                        data=output.getvalue(),
-                        file_name="stierenkaart_selectie.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    )
+                    st.download_button("Download Excel", output.getvalue(), file_name="stierenkaart.xlsx")
                 else:
-                    st.info("Selecteer één of meer stieren om de gegevens te zien en te downloaden.")
+                    st.info("Selecteer stieren om te downloaden.")
             else:
-                st.warning("Kolommen 'ki-code' en/of 'naam' ontbreken in de gemapte data.")
+                st.warning("Kolommen 'ki-code' en/of 'naam' ontbreken.")
         else:
-            st.error("Kon het bestand niet inlezen.")
-    else:
-        st.info("Upload eerst het PIM-bestand.")
+            st.error("Fout bij inlezen bestand.")
 
 if __name__ == "__main__":
     main()
