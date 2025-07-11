@@ -5,6 +5,10 @@ import streamlit as st
 import pandas as pd
 import io
 
+for i, m in enumerate(mapping_table):
+    if "Titel in bestand" not in m:
+        st.error(f"⚠️ mapping_table[{i}] mist key 'Titel in bestand':\n{m}")
+
 # -------------------------------------------------------
 # Mapping table PIM (Nederland)
 # -------------------------------------------------------
