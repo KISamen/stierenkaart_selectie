@@ -65,11 +65,57 @@ mapping_table_nl = [
 ]
 
 # Mapping table Canada (voorbeeld)
+# --- mapping_table_canada (uit jouw mapping, gecorrigeerd)
 mapping_table_canada = [
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "Name", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
-    {"Stierenkaart": "Pedigree", "Titel in bestand": "Roepnaam Vader", "Formule": None},
-    # voeg hier je Canadese velden toe zoals nodig
+    {"Stierenkaart": "Pedigree sire", "Titel in bestand": "Roepnaam Vader", "Formule": None},
+    {"Stierenkaart": "Pedigree mat grandsire", "Titel in bestand": "Roepnaam Vaders Vader", "Formule": None},
+    {"Stierenkaart": "aAa", "Titel in bestand": "AAa code", "Formule": None},
+    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},
+    {"Stierenkaart": "prijs gesekst", "Titel in bestand": "", "Formule": None},
+    {"Stierenkaart": "%reliability", "Titel in bestand": "Official Production Evaluation in this Country %betrouwbaarheid (Productie-index)", "Formule": None},
+    {"Stierenkaart": "kg milk", "Titel in bestand": "Official Production Evalution in this Country KG Melk", "Formule": "/10"},
+    {"Stierenkaart": "%fat", "Titel in bestand": "Offical Production Evaluation in this Country %vet", "Formule": "/100"},
+    {"Stierenkaart": "%protein", "Titel in bestand": "Official Production Evaluation in this County %eiwit", "Formule": "/100"},
+    {"Stierenkaart": "kg fat", "Titel in bestand": "Official Production Evaluation in this Country KG vet", "Formule": "/10"},
+    {"Stierenkaart": "kg protein", "Titel in bestand": "Official Production Evaluation in this Country KG eiwit", "Formule": None},
+    {"Stierenkaart": "%reliability conformation traits", "Titel in bestand": "%betrouwbaarheid (exterieur-index)", "Formule": None},
+    {"Stierenkaart": "frame", "Titel in bestand": "GENERAL CHARACTERISTICS frame", "Formule": "/100"},
+    {"Stierenkaart": "udder", "Titel in bestand": "GENERAL CHARACTERISTICS uier", "Formule": "/100"},
+    {"Stierenkaart": "feet & legs", "Titel in bestand": "GENERAL CHARACTERISTICS benen", "Formule": "/100"},
+    {"Stierenkaart": "final score", "Titel in bestand": "GENERAL CHARACTERISTICS totaal (Exterieur-index)", "Formule": "/100"},
+    {"Stierenkaart": "stature", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY hoogtemaat", "Formule": "/100"},
+    {"Stierenkaart": "chestwidth", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorhand", "Formule": "/100"},
+    {"Stierenkaart": "body depth", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY inhoud", "Formule": "/100"},
+    {"Stierenkaart": "angularity", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY openheid", "Formule": "/100"},
+    {"Stierenkaart": "condition score", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY conditiescore", "Formule": "/100"},
+    {"Stierenkaart": "rump angle", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY kruisligging", "Formule": "/100"},
+    {"Stierenkaart": "rump width", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY kruisbreedte", "Formule": "/100"},
+    {"Stierenkaart": "rear legs rear view", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteraanzicht benen", "Formule": "/100"},
+    {"Stierenkaart": "rear leg set", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beenstand zij", "Formule": "/100"},
+    {"Stierenkaart": "foot angle", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY klauwhoek", "Formule": "/100"},
+    {"Stierenkaart": "front feet orientation", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorbeenstand", "Formule": "/100"},
+    {"Stierenkaart": "locomotion", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beengebruik", "Formule": "/100"},
+    {"Stierenkaart": "fore udder attachment", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY vooruieraanhechting", "Formule": "/100"},
+    {"Stierenkaart": "fore teat placement", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorspeenplaatsing", "Formule": "/100"},
+    {"Stierenkaart": "teat length", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY speenlengte", "Formule": "/100"},
+    {"Stierenkaart": "udder depth", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY uierdiepte", "Formule": "/100"},
+    {"Stierenkaart": "rear udder height", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteruierhoogte", "Formule": "/100"},
+    {"Stierenkaart": "central ligament", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY ophangband", "Formule": "/100"},
+    {"Stierenkaart": "rear teat placement", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achterspeenplaatsing", "Formule": "/100"},
+    {"Stierenkaart": "persistency", "Titel in bestand": "", "Formule": "/100"},
+    {"Stierenkaart": "calving ease", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY geboortegemak", "Formule": "/100"},
+    {"Stierenkaart": "milking speed", "Titel in bestand": "OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY melksnelheid", "Formule": "/100"},
+    {"Stierenkaart": "somatic cell count", "Titel in bestand": "OFFICIAL SOMATIC CELL COUNT EVALUATION IN THIS COUNTRY celgetal", "Formule": "/100"},
+    {"Stierenkaart": "female fertility", "Titel in bestand": "OFFICIAL FEMALE FERTILITY EVALUATION IN THIS COUNTRY vruchtbaarheid", "Formule": "/100"},
+    {"Stierenkaart": "temperament", "Titel in bestand": "OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY karakter", "Formule": "/100"},
+    {"Stierenkaart": "maturity rate", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid", "Formule": "/100"},
+    {"Stierenkaart": "hoofhealth", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
+    {"Stierenkaart": "Beta caseine", "Titel in bestand": "Betacasine", "Formule": None},
+    {"Stierenkaart": "Kappa caseine", "Titel in bestand": "Kappa-caseine", "Formule": None},
+    {"Stierenkaart": "Superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None}
+]
 ]
 
 # -------------------------------------------------------
