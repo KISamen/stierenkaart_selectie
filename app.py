@@ -64,8 +64,9 @@ mapping_table_nl = [
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
 ]
 
-# Mapping table Canada (voorbeeld)
-# --- mapping_table_canada (uit jouw mapping, gecorrigeerd)
+# -------------------------------------------------------
+# Mapping table Canada
+# -------------------------------------------------------
 mapping_table_canada = [
     {"Stierenkaart": "ki-code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "Name", "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
@@ -117,7 +118,7 @@ mapping_table_canada = [
     {"Stierenkaart": "Superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None}
 ]
 # -------------------------------------------------------
-# Excel laden
+# Functie: Excel laden
 # -------------------------------------------------------
 def load_excel(file):
     try:
@@ -129,21 +130,22 @@ def load_excel(file):
         return None
 
 # -------------------------------------------------------
-# Stieren sorteren
+# Functie: sorteer stieren op ras en naam
 # -------------------------------------------------------
 def custom_sort_ras(df):
     if "Ras" not in df.columns:
         df["Ras"] = ""
-    if "naam" not in df.columns:
-        df["naam"] = ""
+    naam_col = "naam" if "naam" in df.columns else ("Name" if "Name" in df.columns else None)
+    if naam_col and naam_col not in df.columns:
+        df[naam_col] = ""
     order_map = {"Holstein zwartbont": 1, "Red Holstein": 2}
     df["ras_sort"] = df["Ras"].map(order_map).fillna(3)
-    df_sorted = df.sort_values(by=["ras_sort", "naam"], ascending=True)
+    df_sorted = df.sort_values(by=["ras_sort", naam_col], ascending=True)
     df_sorted.drop(columns=["ras_sort"], inplace=True)
     return df_sorted
 
 # -------------------------------------------------------
-# Top 5-tabellen maken
+# Functie: maak Top 5-tabellen (alleen NL)
 # -------------------------------------------------------
 def create_top5_table(df):
     fokwaarden = [
@@ -154,70 +156,43 @@ def create_top5_table(df):
         "uier",
         "benen"
     ]
-
     blocks = []
-    if df.empty:
+    if df.empty or "Ras" not in df.columns:
         return pd.DataFrame()
-
-    df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
-    df = df[df["Ras_clean"].isin([
-        "holstein zwartbont",
-        "holstein zwartbont + rf",
-        "red holstein"
-    ])].copy()
-
+    # filter alleen NL-rassen
+    df_nl = df[df["Ras"].isin(["Holstein zwartbont", "Holstein zwartbont + RF", "Red Holstein"])].copy()
     for fok in fokwaarden:
-        if fok not in df.columns:
-            df[fok] = pd.NA
-
-        block = []
-        header_row = {
+        if fok not in df_nl.columns:
+            df_nl[fok] = pd.NA
+        header = {
             "Fokwaarde": fok,
             "zwartbont_stier": "Stier",
             "zwartbont_value": "Waarde",
             "roodbont_stier": "Stier",
             "roodbont_value": "Waarde"
         }
-        block.append(header_row)
-
-        df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
+        blocks.append(header)
+        df_z = df_nl[df_nl["Ras"] == "Holstein zwartbont"].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
-
-        df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
+        df_r = df_nl[df_nl["Ras"] == "Red Holstein"].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
-
         for i in range(5):
-            row = {
-                "Fokwaarde": "",
-                "zwartbont_stier": "",
-                "zwartbont_value": "",
-                "roodbont_stier": "",
-                "roodbont_value": ""
-            }
+            row = {k: "" for k in header}
             if i < len(df_z):
                 row["zwartbont_stier"] = str(df_z.iloc[i]["naam"])
                 row["zwartbont_value"] = str(df_z.iloc[i][fok])
             if i < len(df_r):
                 row["roodbont_stier"] = str(df_r.iloc[i]["naam"])
                 row["roodbont_value"] = str(df_r.iloc[i][fok])
-            block.append(row)
-
-        block.append({
-            "Fokwaarde": "",
-            "zwartbont_stier": "",
-            "zwartbont_value": "",
-            "roodbont_stier": "",
-            "roodbont_value": ""
-        })
-
-        blocks.extend(block)
-
+            blocks.append(row)
+        # lege rij na blok
+        blocks.append({k: "" for k in header})
     return pd.DataFrame(blocks)
 
 # -------------------------------------------------------
-# Main
+# Hoofdapplicatie
 # -------------------------------------------------------
 def main():
     st.set_page_config(layout="wide")
@@ -225,81 +200,84 @@ def main():
 
     # Taalkeuze
     taal = st.selectbox("Kies stierenkaart type:", ["Nederland", "Canada"])
-
     mapping_table = mapping_table_nl if taal == "Nederland" else mapping_table_canada
 
     uploaded_file = st.file_uploader("Upload Excel bestand", type=["xlsx"])
-    if uploaded_file:
-        df_raw = load_excel(uploaded_file)
+    if not uploaded_file:
+        return
 
-        if df_raw is not None:
-            final_data = {}
-            for mapping in mapping_table:
-                titel = mapping["Titel in bestand"]
-                std_naam = mapping["Stierenkaart"]
-                formule = mapping["Formule"]
+    df_raw = load_excel(uploaded_file)
+    if df_raw is None:
+        return
 
-                if titel and titel in df_raw.columns:
-                    kolom = df_raw[titel].replace([99999, "+999"], pd.NA)
-                    if formule:
-                        kolom = pd.to_numeric(kolom, errors="coerce")
-                        if formule == "/10":
-                            kolom = kolom / 10
-                        elif formule == "/100":
-                            kolom = kolom / 100
-                    final_data[std_naam] = kolom
-                else:
-                    final_data[std_naam] = ""
-
-            df_mapped = pd.DataFrame(final_data)
-
-            # pinkenstier berekenen (alleen NL)
-            if taal == "Nederland" and "geboortegemak" in df_mapped.columns:
-                df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
-                    lambda x: "p" if pd.notna(x) and x > 100 else ""
-                )
-            else:
-                df_mapped["pinkenstier"] = ""
-
-            # Kolomvolgorde
-            kolomvolgorde = ["superbevruchter","ki-code","naam","pinkenstier"] + \
-                [x["Stierenkaart"] for x in mapping_table if x["Stierenkaart"] not in ["superbevruchter","ki-code","naam"]]
-            kolomvolgorde = [x for x in kolomvolgorde if x in df_mapped.columns]
-
-            overige_kolommen = [c for c in df_mapped.columns if c not in kolomvolgorde]
-            df_mapped = df_mapped[kolomvolgorde + overige_kolommen]
-
-            # Voeg Display toe
-            if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
-                df_mapped["Display"] = df_mapped["ki-code"].astype(str) + " - " + df_mapped["naam"].astype(str)
-
-                selected_display = st.multiselect("Selecteer stieren:", df_mapped["Display"].tolist())
-                if selected_display:
-                    selected_codes = [x.split(" - ")[0] for x in selected_display]
-                    df_selected = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
-                    df_selected = custom_sort_ras(df_selected)
-
-                    st.dataframe(df_selected)
-
-                    # Top 5 tabellen
-                    df_top5 = create_top5_table(df_selected)
-                    if not df_top5.empty:
-                        st.subheader("Top 5 tabellen")
-                        st.dataframe(df_top5)
-
-                    output = io.BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
-                        if not df_top5.empty:
-                            df_top5.to_excel(writer, sheet_name='Top5_per_ras', index=False)
-
-                    st.download_button("Download Excel", output.getvalue(), file_name="stierenkaart.xlsx")
-                else:
-                    st.info("Selecteer stieren om te downloaden.")
-            else:
-                st.warning("Kolommen 'ki-code' en/of 'naam' ontbreken.")
+    # Bouw final_data
+    final_data = {}
+    for mapping in mapping_table:
+        titel = mapping["Titel in bestand"]
+        std_naam = mapping["Stierenkaart"]
+        formule = mapping["Formule"]
+        if titel and titel in df_raw.columns:
+            kolom = df_raw[titel].replace([99999, "+999"], pd.NA)
+            if formule:
+                kolom = pd.to_numeric(kolom, errors="coerce")
+                if formule == "/10":
+                    kolom = kolom / 10
+                elif formule == "/100":
+                    kolom = kolom / 100
+            final_data[std_naam] = kolom
         else:
-            st.error("Fout bij inlezen bestand.")
+            final_data[std_naam] = ""
+
+    df_mapped = pd.DataFrame(final_data)
+
+    # Pinkenstier alleen voor NL
+    if taal == "Nederland" and "geboortegemak" in df_mapped.columns:
+        df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
+            lambda x: "p" if pd.notna(x) and x > 1.0 else ""
+        )
+    else:
+        df_mapped["pinkenstier"] = ""
+
+    # Dynamische sleutelkolommen
+    naam_col = "naam" if taal == "Nederland" else "Name"
+    ki_col = "ki-code"
+
+    # Kolomvolgorde
+    volgorde = ["superbevruchter", ki_col, naam_col, "pinkenstier"] + [m["Stierenkaart"] for m in mapping_table if m["Stierenkaart"] not in ["superbevruchter", ki_col, naam_col, "pinkenstier"]]
+    volgorde = [c for c in volgorde if c in df_mapped.columns]
+    overige = [c for c in df_mapped.columns if c not in volgorde]
+    df_mapped = df_mapped[volgorde + overige]
+
+    # Display-kolom
+    if ki_col in df_mapped.columns and naam_col in df_mapped.columns:
+        df_mapped["Display"] = df_mapped[ki_col].astype(str) + " - " + df_mapped[naam_col].astype(str)
+
+        keuze = st.multiselect("Selecteer stieren:", df_mapped["Display"].tolist(), default=None)
+        if keuze:
+            codes = [x.split(" - ")[0] for x in keuze]
+            df_selected = df_mapped[df_mapped[ki_col].isin(codes)].copy()
+            df_selected = custom_sort_ras(df_selected)
+
+            st.subheader("Stierenkaart")
+            st.dataframe(df_selected, use_container_width=True)
+
+            # Top-5 alleen NL
+            if taal == "Nederland":
+                df_top5 = create_top5_table(df_selected)
+                st.subheader("Top 5-tabellen")
+                st.dataframe(df_top5, use_container_width=True)
+
+            # Download
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
+                if taal == "Nederland":
+                    df_top5.to_excel(writer, sheet_name='Top5', index=False)
+            st.download_button("Download Excel", data=output.getvalue(), file_name="stierenkaart.xlsx")
+        else:
+            st.info("Selecteer één of meer stieren om de gegevens te zien en te downloaden.")
+    else:
+        st.warning(f"Kolommen '{ki_col}' en/of '{naam_col}' ontbreken in de gemapte data.")
 
 if __name__ == "__main__":
     main()
