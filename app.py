@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import io
 
-# -------------------------------------------------------
-# Functie om Excelbestand te laden
-# -------------------------------------------------------
+# -------------------------------------------
+# Functie om het PIM-bestand te laden
+# -------------------------------------------
 def load_excel(file):
     try:
         df = pd.read_excel(file)
@@ -14,9 +14,9 @@ def load_excel(file):
         st.error(f"Fout bij laden Excel: {e}")
         return None
 
-# -------------------------------------------------------
-# Sorteren per ras (optioneel)
-# -------------------------------------------------------
+# -------------------------------------------
+# Sorteer stieren per ras
+# -------------------------------------------
 def custom_sort_ras(df):
     if "Ras" not in df.columns:
         df["Ras"] = ""
@@ -28,9 +28,9 @@ def custom_sort_ras(df):
     df_sorted.drop(columns=["ras_sort"], inplace=True)
     return df_sorted
 
-# -------------------------------------------------------
-# Top 5-tabellen bouwen
-# -------------------------------------------------------
+# -------------------------------------------
+# Bouw Top 5-tabellen
+# -------------------------------------------
 def create_top5_table(df):
     fokwaarden = [
         "Geboortegemak",
@@ -45,10 +45,7 @@ def create_top5_table(df):
     if df.empty:
         return pd.DataFrame()
 
-    # Voeg hulpkolom toe voor consistentie
     df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
-    
-    # filter enkel Holstein en Red Holstein
     df = df[df["Ras_clean"].isin([
         "holstein zwartbont",
         "holstein zwartbont + rf",
@@ -69,12 +66,10 @@ def create_top5_table(df):
         }
         block.append(header_row)
 
-        # Zwartbont
         df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
         df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
         df_z = df_z.sort_values(by=fok, ascending=False)
 
-        # Roodbont
         df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
         df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
         df_r = df_r.sort_values(by=fok, ascending=False)
@@ -107,14 +102,14 @@ def create_top5_table(df):
 
     return pd.DataFrame(blocks)
 
-# -------------------------------------------------------
-# Streamlit main
-# -------------------------------------------------------
+# -------------------------------------------
+# Streamlit app
+# -------------------------------------------
 def main():
     st.set_page_config(layout="wide")
-    st.title("Nieuwe Stierenkaart App (met Top 5-tabellen)")
+    st.title("Stierenkaart Generator (vereenvoudigd)")
 
-    uploaded_file = st.file_uploader("Upload je Excelbestand met stieren", type=["xlsx"])
+    uploaded_file = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
 
     if uploaded_file:
         df = load_excel(uploaded_file)
@@ -137,19 +132,17 @@ def main():
                 if selected_display:
                     selected_codes = [x.split(" - ")[0] for x in selected_display]
                     df_selected = df[df["KI-Code"].isin(selected_codes)].copy()
-
                     df_selected = custom_sort_ras(df_selected)
 
                     st.subheader("Geselecteerde stieren")
                     st.dataframe(df_selected, use_container_width=True)
 
-                    # Bouw Top 5-tabellen
                     df_top5 = create_top5_table(df_selected)
                     if not df_top5.empty:
-                        st.subheader("Top 5-tabellen (per fokwaarde)")
+                        st.subheader("Top 5-tabellen per fokwaarde")
                         st.dataframe(df_top5, use_container_width=True)
 
-                    # Excel export
+                    # Excel download
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
@@ -165,11 +158,12 @@ def main():
                 else:
                     st.info("Selecteer één of meer stieren om de gegevens te zien en te downloaden.")
             else:
-                st.warning("Kolommen 'KI-Code' en/of 'Stier' niet gevonden in het bestand.")
+                st.warning("Kolommen 'KI-Code' en/of 'Stier' niet gevonden in het PIM-bestand.")
         else:
             st.error("Kon het bestand niet inlezen.")
     else:
-        st.info("Upload eerst een Excelbestand.")
+        st.info("Upload eerst het PIM-bestand.")
 
 if __name__ == "__main__":
     main()
+
