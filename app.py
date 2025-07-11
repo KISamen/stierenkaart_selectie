@@ -116,8 +116,6 @@ mapping_table_canada = [
     {"Stierenkaart": "Kappa caseine", "Titel in bestand": "Kappa-caseine", "Formule": None},
     {"Stierenkaart": "Superbevruchter", "Titel in bestand": "Superbevruchter", "Formule": None}
 ]
-]
-
 # -------------------------------------------------------
 # Excel laden
 # -------------------------------------------------------
