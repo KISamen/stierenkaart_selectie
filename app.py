@@ -27,7 +27,7 @@ mapping_table_pim = [
     {"Stierenkaart": "%vet",            "Titel in bestand": "Offical Production Evaluation in this Country %vet", "Formule": "/100"},
     {"Stierenkaart": "%eiwit",          "Titel in bestand": "Official Production Evaluation in this County %eiwit", "Formule": "/100"},
     {"Stierenkaart": "kg vet",          "Titel in bestand": "Official Production Evaluation in this Country KG vet", "Formule": "/10"},
-    {"Stierenkaart": "kg eiwit",        "Titre in bestand": "Official Production Evaluation in this Country KG eiwit", "Formule": None},
+    {"Stierenkaart": "kg eiwit",        "Titel in bestand": "Official Production Evaluation in this Country KG eiwit", "Formule": None},
     {"Stierenkaart": "INET",            "Titel in bestand": "Official Production Evaluation in this Country Inet", "Formule": None},
     {"Stierenkaart": "NVI",             "Titel in bestand": "Official Production Evaluation in this Country NVI", "Formule": None},
     {"Stierenkaart": "TIP",             "Titel in bestand": "", "Formule": None},
