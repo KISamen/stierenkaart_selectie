@@ -5,10 +5,6 @@ import streamlit as st
 import pandas as pd
 import io
 
-for i, m in enumerate(mapping_table):
-    if "Titel in bestand" not in m:
-        st.error(f"⚠️ mapping_table[{i}] mist key 'Titel in bestand':\n{m}")
-
 # -------------------------------------------------------
 # Mapping table PIM (Nederland)
 # -------------------------------------------------------
@@ -17,7 +13,7 @@ mapping_table_pim = [
     {"Stierenkaart": "ki-code",         "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "naam",            "Titel in bestand": "Afkorting stier (zoeknaam)", "Formule": None},
     {"Stierenkaart": "vader",           "Titel in bestand": "Roepnaam Vader", "Formule": None},
-    {"Stierenkaart": "vaders vader",   "Titel in bestand": "Roepnaam Moeders Vader", "Formule": None},
+    {"Stierenkaart": "vaders vader",    "Titel in bestand": "Roepnaam Moeders Vader", "Formule": None},
     {"Stierenkaart": "PFW",             "Titel in bestand": "PFW code", "Formule": None},
     {"Stierenkaart": "aAa",             "Titel in bestand": "AAa code", "Formule": None},
     {"Stierenkaart": "Beta caseine",    "Titel in bestand": "Betacasine", "Formule": None},
@@ -215,6 +211,11 @@ def main():
     regio = st.radio("Kies regio", ["Nederland", "Canada"])
     mapping_table = mapping_table_pim if regio == "Nederland" else mapping_table_ca
 
+    # Debug-check: mis je nog ergens 'Titel in bestand'?
+    for i, m in enumerate(mapping_table):
+        if "Titel in bestand" not in m:
+            st.error(f"⚠️ mapping_table[{i}] mist key 'Titel in bestand': {m}")
+
     uploaded_file = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
     if not uploaded_file:
         st.info("Upload eerst het PIM-bestand.")
@@ -228,8 +229,8 @@ def main():
     final_data = {}
     for mapping in mapping_table:
         std_naam = mapping["Stierenkaart"]
-        titel = mapping["Titel in bestand"]
-        formule = mapping["Formule"]
+        titel    = mapping["Titel in bestand"]
+        formule  = mapping["Formule"]
         if titel and titel in df_raw.columns:
             kolom = df_raw[titel].replace([99999, "+999"], pd.NA)
             if formule:
@@ -249,6 +250,18 @@ def main():
         df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
             lambda x: "p" if pd.notna(x) and x > 100 else ""
         )
+
+    # Zorg dat ki-code (én bij Canada Name) strings zijn vóór .str
+    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+    if regio == "Canada" and "Name" in df_mapped.columns:
+        df_mapped["Name"] = df_mapped["Name"].astype(str)
+
+    # Display-kolom aanmaken
+    if regio == "Nederland" and "naam" in df_mapped.columns:
+        df_mapped["naam"] = df_mapped["naam"].astype(str)
+        df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"]
+    elif regio == "Canada" and "Name" in df_mapped.columns:
+        df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["Name"]
 
     # Kolomvolgorde en bestandsnaam per regio
     if regio == "Nederland":
@@ -281,13 +294,7 @@ def main():
     df_mapped = df_mapped[bestaande + overige]
 
     # Display & selectie
-    if "ki-code" in df_mapped.columns and (regio == "Nederland" and "naam" in df_mapped.columns or regio == "Canada"):
-        # Display-col: bij NL ki-code + naam, bij CA alleen ki-code of ki-code + Name
-        if regio == "Nederland":
-            df_mapped["Display"] = df_mapped["ki-code"].str.strip().str.upper() + " - " + df_mapped["naam"].astype(str)
-        else:
-            df_mapped["Display"] = df_mapped["ki-code"].str.strip().str.upper() + " - " + df_mapped["Name"].astype(str)
-
+    if "Display" in df_mapped.columns:
         selected = st.multiselect("Selecteer stieren:", options=df_mapped["Display"])
         if selected:
             selected_codes = [s.split(" - ")[0] for s in selected]
