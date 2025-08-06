@@ -175,7 +175,7 @@ def main():
                 df_mapped["pinkenstier"] = ""
 
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
-                df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
+                df_mapped["Display"] = df_mapped["ki-code"].astype(str).str.replace(r"\\.0$", "", regex=True) + " - " + df_mapped["naam"].astype(str)
                 selected_display = st.multiselect("Selecteer stieren:", options=df_mapped["Display"].tolist())
 
                 if selected_display:
