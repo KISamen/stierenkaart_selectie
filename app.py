@@ -215,18 +215,22 @@ def main():
             df_mapped = pd.DataFrame(final_data)
 
             # Prijs overschrijven vanuit prijslijst
-            df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
-if df_prijs_normaal is not None:
-    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
-    df_mapped = df_mapped.drop(columns=["prijs", "prijs gesekst"], errors="ignore")
+            if prijs_file:
+    df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
+    if df_prijs_normaal is not None:
+        df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+        df_mapped = df_mapped.drop(columns=["prijs", "prijs gesekst"], errors="ignore")
 
-    df_mapped = df_mapped.merge(df_prijs_normaal, on="ki-code", how="left")
-    df_mapped = df_mapped.merge(df_prijs_gesekst, on="ki-code", how="left")
+        df_mapped = df_mapped.merge(df_prijs_normaal, on="ki-code", how="left")
+        df_mapped = df_mapped.merge(df_prijs_gesekst, on="ki-code", how="left")
 
-    st.success("Normale en gesekste prijzen succesvol bijgewerkt vanuit prijslijst.")
+        st.success("Normale en gesekste prijzen succesvol bijgewerkt vanuit prijslijst.")
+    else:
+        st.warning("Kon prijslijst niet verwerken.")
 else:
-    st.warning("Kon prijslijst niet verwerken.")
-    
+    st.warning("Geen prijslijst geüpload. Oorspronkelijke prijswaarden worden gebruikt (indien aanwezig).")
+
+
             # Voeg pinkenstier toe
             if "geboortegemak" in df_mapped.columns:
                 df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
