@@ -81,11 +81,21 @@ def load_excel(file):
 # -------------------------------------------------------
 def load_prijslijst(file):
     try:
-        df = pd.read_excel(file, usecols="E,F")
-        df.columns = df.columns.str.strip()
-        df.rename(columns={df.columns[1]: "ki-code", df.columns[0]: "prijs"}, inplace=True)
+        df = pd.read_excel(file)
+        df.columns = df.columns.str.strip().str.lower()  # Uniforme kolomnamen
+
+        # Controleer of de juiste kolommen erin zitten
+        if "ki-code" not in df.columns or "prijs" not in df.columns:
+            st.error("De kolommen 'ki-code' en/of 'prijs' ontbreken in de prijslijst.")
+            return None
+
+        df = df.rename(columns={"ki-code": "ki-code", "prijs": "prijs"})
         df["ki-code"] = df["ki-code"].astype(str).str.strip().str.upper()
-        return df
+
+        # Converteer prijs, ook als er komma’s in staan (zoals "17,5")
+        df["prijs"] = df["prijs"].astype(str).str.replace(",", ".").astype(float)
+
+        return df[["ki-code", "prijs"]]
     except Exception as e:
         st.error(f"Fout bij laden prijslijst: {e}")
         return None
