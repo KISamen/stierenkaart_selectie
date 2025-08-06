@@ -82,23 +82,30 @@ def load_excel(file):
 def load_prijslijst(file):
     try:
         df = pd.read_excel(file)
-        df.columns = df.columns.str.strip().str.lower()  # Uniforme kolomnamen
+        df.columns = df.columns.str.strip().str.lower()
 
-        # Controleer of de juiste kolommen erin zitten
         if "ki-code" not in df.columns or "prijs" not in df.columns:
             st.error("De kolommen 'ki-code' en/of 'prijs' ontbreken in de prijslijst.")
             return None
 
         df = df.rename(columns={"ki-code": "ki-code", "prijs": "prijs"})
         df["ki-code"] = df["ki-code"].astype(str).str.strip().str.upper()
-
-        # Converteer prijs, ook als er komma’s in staan (zoals "17,5")
         df["prijs"] = df["prijs"].astype(str).str.replace(",", ".").astype(float)
 
-        return df[["ki-code", "prijs"]]
+        # Verdeel in normaal en gesekst
+        df["is_gesekst"] = df["ki-code"].str.endswith("-S")
+        df_normaal = df[~df["is_gesekst"]].copy()
+        df_gesekst = df[df["is_gesekst"]].copy()
+
+        # Verwijder '-S' bij gesekst om te matchen met PIM-bestand
+        df_gesekst["ki-code"] = df_gesekst["ki-code"].str.replace("-S", "", regex=False)
+
+        return df_normaal[["ki-code", "prijs"]], df_gesekst[["ki-code", "prijs"]].rename(columns={"prijs": "prijs gesekst"})
+
     except Exception as e:
         st.error(f"Fout bij laden prijslijst: {e}")
-        return None
+        return None, None
+
 
 # -------------------------------------------------------
 # Stieren sorteren
@@ -208,18 +215,18 @@ def main():
             df_mapped = pd.DataFrame(final_data)
 
             # Prijs overschrijven vanuit prijslijst
-            if prijs_file:
-                df_prijs = load_prijslijst(prijs_file)
-                if df_prijs is not None and not df_prijs.empty:
-                    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
-                    df_mapped = df_mapped.drop(columns=["prijs"], errors="ignore")
-                    df_mapped = df_mapped.merge(df_prijs, on="ki-code", how="left")
-                    st.success("Prijzen succesvol bijgewerkt vanuit prijslijst.")
-                else:
-                    st.warning("Prijslijst is leeg of kon niet geladen worden.")
-            else:
-                st.warning("Geen prijslijst geüpload. Oorspronkelijke prijswaarden worden gebruikt (indien aanwezig).")
+            df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
+if df_prijs_normaal is not None:
+    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+    df_mapped = df_mapped.drop(columns=["prijs", "prijs gesekst"], errors="ignore")
 
+    df_mapped = df_mapped.merge(df_prijs_normaal, on="ki-code", how="left")
+    df_mapped = df_mapped.merge(df_prijs_gesekst, on="ki-code", how="left")
+
+    st.success("Normale en gesekste prijzen succesvol bijgewerkt vanuit prijslijst.")
+else:
+    st.warning("Kon prijslijst niet verwerken.")
+    
             # Voeg pinkenstier toe
             if "geboortegemak" in df_mapped.columns:
                 df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
