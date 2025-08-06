@@ -63,7 +63,6 @@ mapping_table_pim = [
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
 ]
-
 # -------------------------------------------------------
 # Excel inlezen
 # -------------------------------------------------------
@@ -77,7 +76,7 @@ def load_excel(file):
         return None
 
 # -------------------------------------------------------
-# Prijslijst inlezen (kolom E = prijs, kolom F = ki-code)
+# Prijslijst inlezen (normaal en gesekst)
 # -------------------------------------------------------
 def load_prijslijst(file):
     try:
@@ -86,18 +85,16 @@ def load_prijslijst(file):
 
         if "ki-code" not in df.columns or "prijs" not in df.columns:
             st.error("De kolommen 'ki-code' en/of 'prijs' ontbreken in de prijslijst.")
-            return None
+            return None, None
 
         df = df.rename(columns={"ki-code": "ki-code", "prijs": "prijs"})
         df["ki-code"] = df["ki-code"].astype(str).str.strip().str.upper()
         df["prijs"] = df["prijs"].astype(str).str.replace(",", ".").astype(float)
 
-        # Verdeel in normaal en gesekst
         df["is_gesekst"] = df["ki-code"].str.endswith("-S")
         df_normaal = df[~df["is_gesekst"]].copy()
         df_gesekst = df[df["is_gesekst"]].copy()
 
-        # Verwijder '-S' bij gesekst om te matchen met PIM-bestand
         df_gesekst["ki-code"] = df_gesekst["ki-code"].str.replace("-S", "", regex=False)
 
         return df_normaal[["ki-code", "prijs"]], df_gesekst[["ki-code", "prijs"]].rename(columns={"prijs": "prijs gesekst"})
@@ -105,7 +102,6 @@ def load_prijslijst(file):
     except Exception as e:
         st.error(f"Fout bij laden prijslijst: {e}")
         return None, None
-
 
 # -------------------------------------------------------
 # Stieren sorteren
@@ -120,59 +116,6 @@ def custom_sort_ras(df):
     df_sorted = df.sort_values(by=["ras_sort", "naam"], ascending=True)
     df_sorted.drop(columns=["ras_sort"], inplace=True)
     return df_sorted
-
-# -------------------------------------------------------
-# Top 5-tabellen maken
-# -------------------------------------------------------
-def create_top5_table(df):
-    fokwaarden = ["geboortegemak", "celgetal", "vruchtbaarheid", "klauwgezondheid", "uier", "benen"]
-    blocks = []
-    if df.empty:
-        return pd.DataFrame()
-    df["Ras_clean"] = df["Ras"].astype(str).str.strip().str.lower()
-    df = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf", "red holstein"])].copy()
-    for fok in fokwaarden:
-        if fok not in df.columns:
-            df[fok] = pd.NA
-        block = []
-        header_row = {
-            "Fokwaarde": fok,
-            "zwartbont_stier": "Stier",
-            "zwartbont_value": "Waarde",
-            "roodbont_stier": "Stier",
-            "roodbont_value": "Waarde"
-        }
-        block.append(header_row)
-        df_z = df[df["Ras_clean"].isin(["holstein zwartbont", "holstein zwartbont + rf"])].copy()
-        df_z[fok] = pd.to_numeric(df_z[fok], errors='coerce')
-        df_z = df_z.sort_values(by=fok, ascending=False)
-        df_r = df[df["Ras_clean"].str.contains("red holstein")].copy()
-        df_r[fok] = pd.to_numeric(df_r[fok], errors='coerce')
-        df_r = df_r.sort_values(by=fok, ascending=False)
-        for i in range(5):
-            row = {
-                "Fokwaarde": "",
-                "zwartbont_stier": "",
-                "zwartbont_value": "",
-                "roodbont_stier": "",
-                "roodbont_value": ""
-            }
-            if i < len(df_z):
-                row["zwartbont_stier"] = str(df_z.iloc[i]["naam"])
-                row["zwartbont_value"] = str(df_z.iloc[i][fok])
-            if i < len(df_r):
-                row["roodbont_stier"] = str(df_r.iloc[i]["naam"])
-                row["roodbont_value"] = str(df_r.iloc[i][fok])
-            block.append(row)
-        block.append({
-            "Fokwaarde": "",
-            "zwartbont_stier": "",
-            "zwartbont_value": "",
-            "roodbont_stier": "",
-            "roodbont_value": ""
-        })
-        blocks.extend(block)
-    return pd.DataFrame(blocks)
 
 # -------------------------------------------------------
 # Streamlit main
@@ -197,8 +140,7 @@ def main():
                 std_naam = mapping["Stierenkaart"]
                 formule = mapping["Formule"]
                 if titel and titel in df_raw.columns:
-                    kolom = df_raw[titel]
-                    kolom = kolom.replace([99999, "+999"], pd.NA)
+                    kolom = df_raw[titel].replace([99999, "+999"], pd.NA)
                     if formule:
                         try:
                             kolom = pd.to_numeric(kolom, errors="coerce")
@@ -214,51 +156,27 @@ def main():
 
             df_mapped = pd.DataFrame(final_data)
 
-            # Prijs overschrijven vanuit prijslijst
             if prijs_file:
-             df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
-             if df_prijs_normaal is not None:
-              df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
-              df_mapped = df_mapped.drop(columns=["prijs", "prijs gesekst"], errors="ignore")
+                df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
+                if df_prijs_normaal is not None:
+                    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+                    df_mapped = df_mapped.drop(columns=["prijs", "prijs gesekst"], errors="ignore")
+                    df_mapped = df_mapped.merge(df_prijs_normaal, on="ki-code", how="left")
+                    df_mapped = df_mapped.merge(df_prijs_gesekst, on="ki-code", how="left")
+                    st.success("Normale en gesekste prijzen succesvol bijgewerkt vanuit prijslijst.")
+                else:
+                    st.warning("Kon prijslijst niet verwerken.")
+            else:
+                st.warning("Geen prijslijst geüpload. Oorspronkelijke prijswaarden worden gebruikt (indien aanwezig).")
 
-              df_mapped = df_mapped.merge(df_prijs_normaal, on="ki-code", how="left")
-              df_mapped = df_mapped.merge(df_prijs_gesekst, on="ki-code", how="left")
-
-              st.success("Normale en gesekste prijzen succesvol bijgewerkt vanuit prijslijst.")
-           else:
-            st.warning("Kon prijslijst niet verwerken.")
-         else:
-         st.warning("Geen prijslijst geüpload. Oorspronkelijke prijswaarden worden gebruikt (indien aanwezig).")
-
-
-            # Voeg pinkenstier toe
             if "geboortegemak" in df_mapped.columns:
-                df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
-                    lambda x: "p" if pd.notna(x) and x > 100 else ""
-                )
+                df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(lambda x: "p" if pd.notna(x) and x > 100 else "")
             else:
                 df_mapped["pinkenstier"] = ""
 
-            # Kolomvolgorde
-            kolomvolgorde = [
-                "superbevruchter",
-                "ki-code",
-                "naam",
-                "pinkenstier"
-            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter", "ki-code", "naam")]
-
-            bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
-            overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
-            df_mapped = df_mapped[bestaande_kolommen + overige_kolommen]
-
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
-                df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
                 df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"].astype(str)
-
-                selected_display = st.multiselect(
-                    "Selecteer stieren:",
-                    options=df_mapped["Display"].tolist()
-                )
+                selected_display = st.multiselect("Selecteer stieren:", options=df_mapped["Display"].tolist())
 
                 if selected_display:
                     selected_codes = [x.split(" - ")[0] for x in selected_display]
@@ -267,19 +185,13 @@ def main():
                     st.subheader("Geselecteerde stieren")
                     st.dataframe(df_selected, use_container_width=True)
 
-                    df_top5 = create_top5_table(df_selected)
-                    if not df_top5.empty:
-                        st.subheader("Top 5-tabellen per fokwaarde")
-                        st.dataframe(df_top5, use_container_width=True)
-
+                    # Exporteer selectie
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
-                        if not df_top5.empty:
-                            df_top5.to_excel(writer, sheet_name='Top5_per_ras', index=False)
 
                     st.download_button(
-                        label="Download selectie + Top 5-tabellen",
+                        label="Download selectie",
                         data=output.getvalue(),
                         file_name="stierenkaart_selectie.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
