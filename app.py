@@ -18,7 +18,7 @@ mapping_table_pim = [
     {"Stierenkaart": "aAa", "Titel in bestand": "AAa code", "Formule": None},
     {"Stierenkaart": "Beta caseine", "Titel in bestand": "Betacasine", "Formule": None},
     {"Stierenkaart": "Kappa caseine", "Titel in bestand": "Kappa-caseine", "Formule": None},
-    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},
+    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},  # Wordt overschreven met prijslijst
     {"Stierenkaart": "prijs gesekst", "Titel in bestand": "", "Formule": None},
     {"Stierenkaart": "&betrouwbaarheid productie", "Titel in bestand": "Official Production Evaluation in this Country %betrouwbaarheid (Productie-index)", "Formule": None},
     {"Stierenkaart": "kg melk", "Titel in bestand": "Official Production Evalution in this Country KG Melk", "Formule": "/10"},
@@ -74,6 +74,20 @@ def load_excel(file):
         return df
     except Exception as e:
         st.error(f"Fout bij laden Excel: {e}")
+        return None
+
+# -------------------------------------------------------
+# Prijslijst inlezen (kolom E = prijs, kolom F = ki-code)
+# -------------------------------------------------------
+def load_prijslijst(file):
+    try:
+        df = pd.read_excel(file, usecols="E,F")
+        df.columns = df.columns.str.strip()
+        df.rename(columns={df.columns[1]: "ki-code", df.columns[0]: "prijs"}, inplace=True)
+        df["ki-code"] = df["ki-code"].astype(str).str.strip().str.upper()
+        return df
+    except Exception as e:
+        st.error(f"Fout bij laden prijslijst: {e}")
         return None
 
 # -------------------------------------------------------
@@ -151,6 +165,7 @@ def main():
     st.title("Stierenkaart Generator (PIM versie, met formules)")
 
     uploaded_file = st.file_uploader("Upload PIM K.I. Samen.xlsx", type=["xlsx"])
+    prijs_file = st.file_uploader("Upload prijslijst.xlsx", type=["xlsx"])
 
     if uploaded_file:
         df_raw = load_excel(uploaded_file)
@@ -182,6 +197,19 @@ def main():
 
             df_mapped = pd.DataFrame(final_data)
 
+            # Prijs overschrijven vanuit prijslijst
+            if prijs_file:
+                df_prijs = load_prijslijst(prijs_file)
+                if df_prijs is not None and not df_prijs.empty:
+                    df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper()
+                    df_mapped = df_mapped.drop(columns=["prijs"], errors="ignore")
+                    df_mapped = df_mapped.merge(df_prijs, on="ki-code", how="left")
+                    st.success("Prijzen succesvol bijgewerkt vanuit prijslijst.")
+                else:
+                    st.warning("Prijslijst is leeg of kon niet geladen worden.")
+            else:
+                st.warning("Geen prijslijst geüpload. Oorspronkelijke prijswaarden worden gebruikt (indien aanwezig).")
+
             # Voeg pinkenstier toe
             if "geboortegemak" in df_mapped.columns:
                 df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
@@ -196,7 +224,7 @@ def main():
                 "ki-code",
                 "naam",
                 "pinkenstier"
-            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter","ki-code","naam")]
+            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter", "ki-code", "naam")]
 
             bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
             overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
