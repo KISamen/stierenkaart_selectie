@@ -63,6 +63,7 @@ mapping_table_pim = [
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"}
 ]
+
 # -------------------------------------------------------
 # Excel inlezen
 # -------------------------------------------------------
@@ -152,7 +153,8 @@ def main():
                             st.warning(f"Kon formule toepassen op kolom {titel}: {e}")
                     final_data[std_naam] = kolom
                 else:
-                    final_data[std_naam] = ""
+                    if std_naam not in ["prijs", "prijs gesekst"]:
+                        final_data[std_naam] = ""
 
             df_mapped = pd.DataFrame(final_data)
 
@@ -174,8 +176,21 @@ def main():
             else:
                 df_mapped["pinkenstier"] = ""
 
+            kolomvolgorde = [
+                "superbevruchter",
+                "ki-code",
+                "naam",
+                "pinkenstier",
+                "prijs",
+                "prijs gesekst"
+            ] + [k["Stierenkaart"] for k in mapping_table_pim if k["Stierenkaart"] not in ("superbevruchter", "ki-code", "naam", "prijs", "prijs gesekst")]
+
+            bestaande_kolommen = [k for k in kolomvolgorde if k in df_mapped.columns]
+            overige_kolommen = [k for k in df_mapped.columns if k not in bestaande_kolommen]
+            df_mapped = df_mapped[bestaande_kolommen + overige_kolommen]
+
             if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
-                df_mapped["Display"] = df_mapped["ki-code"].astype(str).str.replace(r"\\.0$", "", regex=True) + " - " + df_mapped["naam"].astype(str)
+                df_mapped["Display"] = df_mapped["ki-code"].astype(str).str.replace(r"\.0$", "", regex=True) + " - " + df_mapped["naam"].astype(str)
                 selected_display = st.multiselect("Selecteer stieren:", options=df_mapped["Display"].tolist())
 
                 if selected_display:
@@ -185,7 +200,6 @@ def main():
                     st.subheader("Geselecteerde stieren")
                     st.dataframe(df_selected, use_container_width=True)
 
-                    # Exporteer selectie
                     output = io.BytesIO()
                     with pd.ExcelWriter(output, engine='openpyxl') as writer:
                         df_selected.to_excel(writer, sheet_name='Stierenkaart', index=False)
