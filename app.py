@@ -78,34 +78,46 @@ def load_excel(file):
 # Prijslijst inlezen
 # -------------------------------------------------------
 def load_prijslijst(file):
+    """
+    Leest de prijslijst en neemt ALTIJD de prijs uit kolom E (5e kolom).
+    Splitst ook -S (gesekst) uit naar aparte kolom 'prijs gesekst'.
+    """
     try:
-        df = pd.read_excel(file)
+        # Lees de prijslijst
+        df = pd.read_excel(file)  # evt. sheet_name="Blad1" toevoegen als nodig
+        # Kolomnamen strippen (helpt bij 'ki-code')
         df.columns = df.columns.str.strip()
 
-        if "ki-code" not in df.columns:
-            st.error("Kolom 'ki-code' ontbreekt in de prijslijst.")
+        # Controle: we hebben minimaal 5 kolommen nodig (A..E)
+        if df.shape[1] < 5:
+            st.error("De prijslijst heeft minder dan 5 kolommen; kolom E ontbreekt.")
             return None, None
 
-        prijs_kandidaten = ["Nieuwe prijs", "Prijs op stierenkaart", "Eenheidsprijs", "prijs"]
-        prijs_kolom = next((c for c in prijs_kandidaten if c in df.columns), None)
-        if not prijs_kolom:
-            st.error("Geen bruikbare prijs-kolom gevonden.")
-            return None, None
+        # Pak kolom A als ki-code (1e kolom) en kolom E als prijs (5e kolom)
+        # (ongeacht de header-namen)
+        ki_series = df.iloc[:, 0]
+        prijs_series = df.iloc[:, 4]
 
-        df = df.rename(columns={prijs_kolom: "prijs"})
-        df["ki-code"] = df["ki-code"].astype(str).str.strip().str.upper()
-        df["prijs"] = pd.to_numeric(df["prijs"].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        # Bouw een compact dataframe
+        df_prices = pd.DataFrame({
+            "ki-code": ki_series.astype(str).str.strip().str.upper(),
+            "prijs": prijs_series.astype(str).str.replace(",", ".", regex=False)
+        })
+        df_prices["prijs"] = pd.to_numeric(df_prices["prijs"], errors="coerce")
 
-        df["is_gesekst"] = df["ki-code"].str.endswith("-S")
-        df_normaal = df[~df["is_gesekst"]][["ki-code", "prijs"]].copy()
-        df_gesekst = df[df["is_gesekst"]][["ki-code", "prijs"]].copy()
+        # Gesekst herkennen aan -S, basiscode voor join
+        df_prices["is_gesekst"] = df_prices["ki-code"].str.endswith("-S")
+        df_normaal = df_prices[~df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
+        df_gesekst = df_prices[df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
         df_gesekst["ki-code"] = df_gesekst["ki-code"].str.replace("-S", "", regex=False)
         df_gesekst = df_gesekst.rename(columns={"prijs": "prijs gesekst"})
 
         return df_normaal, df_gesekst
+
     except Exception as e:
-        st.error(f"Fout bij laden prijslijst: {e}")
+        st.error(f"Fout bij laden prijslijst (kolom E): {e}")
         return None, None
+
 
 # -------------------------------------------------------
 # Stieren sorteren
