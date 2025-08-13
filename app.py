@@ -18,7 +18,7 @@ mapping_table_pim = [
     {"Stierenkaart": "aAa", "Titel in bestand": "AAa code", "Formule": None},
     {"Stierenkaart": "Beta caseine", "Titel in bestand": "Betacasine", "Formule": None},
     {"Stierenkaart": "Kappa caseine", "Titel in bestand": "Kappa-caseine", "Formule": None},
-    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},
+    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},  # wordt overschreven met prijslijst
     {"Stierenkaart": "prijs gesekst", "Titel in bestand": "", "Formule": None},
     {"Stierenkaart": "&betrouwbaarheid productie", "Titel in bestand": "Official Production Evaluation in this Country %betrouwbaarheid (Productie-index)", "Formule": None},
     {"Stierenkaart": "kg melk", "Titel in bestand": "Official Production Evalution in this Country KG Melk", "Formule": "/10"},
@@ -45,11 +45,13 @@ mapping_table_pim = [
     {"Stierenkaart": "beenstand zij", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beenstand zij", "Formule": "/100"},
     {"Stierenkaart": "klauwhoek", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY klauwhoek", "Formule": "/100"},
     {"Stierenkaart": "voorbeenstand", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorbeenstand", "Formule": "/100"},
+    {"Stierenkaart": "beengebruik", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY beengebruik", "Formule": "/100"},
     {"Stierenkaart": "vooruieraanhechting", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY vooruieraanhechting", "Formule": "/100"},
     {"Stierenkaart": "voorspeenplaatsing", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY voorspeenplaatsing", "Formule": "/100"},
     {"Stierenkaart": "speenlengte", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY speenlengte", "Formule": "/100"},
     {"Stierenkaart": "uierdiepte", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY uierdiepte", "Formule": "/100"},
     {"Stierenkaart": "achteruierhoogte", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achteruierhoogte", "Formule": "/100"},
+    {"Stierenkaart": "ophangband", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY ophangband", "Formule": "/100"},
     {"Stierenkaart": "achterspeenplaatsing", "Titel in bestand": "OFFICIAL CONFORMATION EVALUATION IN THIS COUNTRY achterspeenplaatsing", "Formule": "/100"},
     {"Stierenkaart": "geboortegemak", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY geboortegemak", "Formule": "/100"},
     {"Stierenkaart": "melksnelheid", "Titel in bestand": "OFFICIAL MILKING SPEED AND TEMPERAMENT EVALUATION IN THIS COUNTRY melksnelheid", "Formule": "/100"},
@@ -59,7 +61,7 @@ mapping_table_pim = [
     {"Stierenkaart": "laatrijpheid", "Titel in bestand": "OFFICIAL CALVING EASE EVALUATION IN THIS COUNTRY laatrijpheid", "Formule": "/100"},
     {"Stierenkaart": "persistentie", "Titel in bestand": "", "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
-    {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": None},
+    {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": "/100"},
 ]
 
 # -------------------------------------------------------
@@ -75,37 +77,32 @@ def load_excel(file):
         return None
 
 # -------------------------------------------------------
-# Prijslijst inlezen
+# Prijslijst inlezen - ALTIJD prijs uit kolom E (5e kolom)
 # -------------------------------------------------------
 def load_prijslijst(file):
     """
-    Leest de prijslijst en neemt ALTIJD de prijs uit kolom E (5e kolom).
-    Splitst ook -S (gesekst) uit naar aparte kolom 'prijs gesekst'.
+    Neemt prijs altijd uit kolom E (ongeacht kolomtitel).
+    Splitst -S (gesekst) naar aparte kolom 'prijs gesekst'.
     """
     try:
-        # Lees de prijslijst
-        df = pd.read_excel(file)  # evt. sheet_name="Blad1" toevoegen als nodig
-        # Kolomnamen strippen (helpt bij 'ki-code')
+        df = pd.read_excel(file)  # evt. sheet_name="Blad1" toevoegen indien gewenst
         df.columns = df.columns.str.strip()
 
-        # Controle: we hebben minimaal 5 kolommen nodig (A..E)
         if df.shape[1] < 5:
             st.error("De prijslijst heeft minder dan 5 kolommen; kolom E ontbreekt.")
             return None, None
 
-        # Pak kolom A als ki-code (1e kolom) en kolom E als prijs (5e kolom)
-        # (ongeacht de header-namen)
+        # kolom A = ki-code (eerste kolom), kolom E = prijs (vijfde kolom)
         ki_series = df.iloc[:, 0]
         prijs_series = df.iloc[:, 4]
 
-        # Bouw een compact dataframe
         df_prices = pd.DataFrame({
             "ki-code": ki_series.astype(str).str.strip().str.upper(),
-            "prijs": prijs_series.astype(str).str.replace(",", ".", regex=False)
+            "prijs": prijs_series.astype(str).str.replace(",", ".", regex=False),
         })
         df_prices["prijs"] = pd.to_numeric(df_prices["prijs"], errors="coerce")
 
-        # Gesekst herkennen aan -S, basiscode voor join
+        # -S betekent gesekst; verwijder -S voor join-sleutel
         df_prices["is_gesekst"] = df_prices["ki-code"].str.endswith("-S")
         df_normaal = df_prices[~df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
         df_gesekst = df_prices[df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
@@ -113,11 +110,9 @@ def load_prijslijst(file):
         df_gesekst = df_gesekst.rename(columns={"prijs": "prijs gesekst"})
 
         return df_normaal, df_gesekst
-
     except Exception as e:
         st.error(f"Fout bij laden prijslijst (kolom E): {e}")
         return None, None
-
 
 # -------------------------------------------------------
 # Stieren sorteren
@@ -152,7 +147,7 @@ def main():
         st.error("Kon het PIM-bestand niet inlezen.")
         return
 
-    # Mapping toepassen
+    # --- Mapping toepassen ---
     final_data = {}
     for mapping in mapping_table_pim:
         titel = mapping["Titel in bestand"]
@@ -171,10 +166,15 @@ def main():
             final_data[std_naam] = ""
     df_mapped = pd.DataFrame(final_data)
 
+    # KI-codes normaliseren (ook voor merge)
     if "ki-code" in df_mapped.columns:
-        df_mapped["ki-code"] = df_mapped["ki-code"].astype(str).str.strip().str.upper().str.replace(r"\.0$", "", regex=True)
+        df_mapped["ki-code"] = (
+            df_mapped["ki-code"]
+            .astype(str).str.strip().str.upper()
+            .str.replace(r"\.0$", "", regex=True)
+        )
 
-    # Prijslijst verwerken
+    # --- Prijslijst verwerken ---
     if prijs_file:
         df_prijs_normaal, df_prijs_gesekst = load_prijslijst(prijs_file)
         if df_prijs_normaal is not None:
@@ -184,39 +184,63 @@ def main():
 
     # Pinkenstier
     if "geboortegemak" in df_mapped.columns:
-        df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(lambda x: "p" if pd.notna(x) and x > 100 else "")
+        df_mapped["pinkenstier"] = df_mapped["geboortegemak"].apply(
+            lambda x: "p" if pd.notna(x) and x > 100 else ""
+        )
+    else:
+        df_mapped["pinkenstier"] = ""
 
-    # Selectie
+    # --- UI selectie & export ---
     if "ki-code" in df_mapped.columns and "naam" in df_mapped.columns:
         df_mapped["Display"] = df_mapped["ki-code"] + " - " + df_mapped["naam"]
         selected_display = st.multiselect("Selecteer stieren:", options=df_mapped["Display"].tolist())
+
         if selected_display:
             selected_codes = [x.split(" - ")[0] for x in selected_display]
             df_selected = df_mapped[df_mapped["ki-code"].isin(selected_codes)].copy()
             df_selected = custom_sort_ras(df_selected, df_raw=df_raw)
 
-            # Export met vaste kolomvolgorde
+            st.subheader("Geselecteerde stieren")
+            st.dataframe(df_selected, use_container_width=True)
+
+            # -------------------------------------------------------
+            # Exporteren met gewenste kolomvolgorde
+            # -------------------------------------------------------
+            output = io.BytesIO()
+
+            # maak lege TIP-kolom als die ontbreekt
             if "TIP" not in df_selected.columns:
                 df_selected["TIP"] = ""
 
             kolomvolgorde = [
-                "superbevruchter","ki-code","naam","pinkenstier","vader","vaders vader","PFW","aAa",
-                "Beta caseine","Kappa caseine","prijs","prijs gesekst","&betrouwbaarheid productie","kg melk",
-                "%vet","%eiwit","kg vet","kg eiwit","INET","NVI","TIP","%betrouwbaarheid exterieur","frame",
-                "uier","benen","totaal","hoogtemaat","voorhand","inhoud","ribvorm","conditiescore",
-                "kruisligging","kruisbreedte","beenstand achter","beenstand zij","klauwhoek","voorbeenstand",
-                "vooruieraanhechting","voorspeenplaatsing","speenlengte","uierdiepte","achteruierhoogte",
-                "achterspeenplaatsing","geboortegemak","melksnelheid","celgetal","vruchtbaarheid","karakter",
-                "laatrijpheid","persistentie","klauwgezondheid","levensduur"
+                "superbevruchter", "ki-code", "naam", "pinkenstier", "vader", "vaders vader",
+                "PFW", "aAa", "Beta caseine", "Kappa caseine",
+                "prijs", "prijs gesekst",
+                "&betrouwbaarheid productie", "kg melk", "%vet", "%eiwit", "kg vet", "kg eiwit",
+                "INET", "NVI", "TIP",
+                "%betrouwbaarheid exterieur", "frame", "uier", "benen", "totaal",
+                "hoogtemaat", "voorhand", "inhoud", "ribvorm", "conditiescore",
+                "kruisligging", "kruisbreedte", "beenstand achter", "beenstand zij",
+                "klauwhoek", "voorbeenstand", "beengebruik",
+                "vooruieraanhechting", "voorspeenplaatsing", "speenlengte",
+                "uierdiepte", "achteruierhoogte", "ophangband",
+                "achterspeenplaatsing",
+                "geboortegemak", "melksnelheid", "celgetal", "vruchtbaarheid",
+                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur",
             ]
+
+            # Alleen kolommen meenemen die er zijn
             bestaande_kolommen = [c for c in kolomvolgorde if c in df_selected.columns]
+
+            # Prijzen afronden
             for c in ["prijs", "prijs gesekst"]:
                 if c in df_selected.columns:
                     df_selected[c] = pd.to_numeric(df_selected[c], errors="coerce").round(2)
 
-            output = io.BytesIO()
+            df_selected_export = df_selected[bestaande_kolommen].copy()
+
             with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_selected[bestaande_kolommen].to_excel(writer, sheet_name='Stierenkaart', index=False)
+                df_selected_export.to_excel(writer, sheet_name='Stierenkaart', index=False)
 
             st.download_button(
                 label="Download selectie",
@@ -224,6 +248,10 @@ def main():
                 file_name="stierenkaart_selectie.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+        else:
+            st.info("Selecteer één of meer stieren om de gegevens te zien en te downloaden.")
+    else:
+        st.warning("Kolommen 'ki-code' en/of 'naam' ontbreken in de gemapte data.")
 
 if __name__ == "__main__":
     main()
