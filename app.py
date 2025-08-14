@@ -62,6 +62,8 @@ mapping_table_pim = [
     {"Stierenkaart": "persistentie", "Titel in bestand": "Persistentie", "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": None},
+    {"Stierenkaart": "koe familie", "Titel in bestand": "Koe familie", "Formule": None}
+
 ]
 
 # -------------------------------------------------------
@@ -226,7 +228,7 @@ def main():
                 "uierdiepte", "achteruierhoogte", "ophangband",
                 "achterspeenplaatsing",
                 "geboortegemak", "melksnelheid", "celgetal", "vruchtbaarheid",
-                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur",
+                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur", "koe familie"
             ]
 
             # Alleen kolommen meenemen die er zijn
