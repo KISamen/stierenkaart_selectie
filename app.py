@@ -1,4 +1,4 @@
-import os
+import os 
 os.environ["STREAMLIT_WATCH"] = "false"
 
 import streamlit as st
@@ -18,8 +18,11 @@ mapping_table_pim = [
     {"Stierenkaart": "aAa", "Titel in bestand": "AAa code", "Formule": None},
     {"Stierenkaart": "Beta caseine", "Titel in bestand": "Betacasine", "Formule": None},
     {"Stierenkaart": "Kappa caseine", "Titel in bestand": "Kappa-caseine", "Formule": None},
-    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},  # wordt overschreven met prijslijst
+
+    # prijs uit PIM (wordt overschreven door prijslijst)
+    {"Stierenkaart": "prijs", "Titel in bestand": "Prijs", "Formule": None},
     {"Stierenkaart": "prijs gesekst", "Titel in bestand": "", "Formule": None},
+
     {"Stierenkaart": "&betrouwbaarheid productie", "Titel in bestand": "Official Production Evaluation in this Country %betrouwbaarheid (Productie-index)", "Formule": None},
     {"Stierenkaart": "kg melk", "Titel in bestand": "Official Production Evalution in this Country KG Melk", "Formule": "/10"},
     {"Stierenkaart": "%vet", "Titel in bestand": "Offical Production Evaluation in this Country %vet", "Formule": "/100"},
@@ -62,7 +65,9 @@ mapping_table_pim = [
     {"Stierenkaart": "persistentie", "Titel in bestand": "Persistentie", "Formule": "/100"},
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": None},
-    {"Stierenkaart": "koe familie", "Titel in bestand": "Koe familie", "Formule": None}
+    {"Stierenkaart": "koe familie", "Titel in bestand": "Koe familie", "Formule": None},
+
+    # ---- extra codes voor export (na 'koe familie') ----
     {"Stierenkaart": "Stiercode NL / KI code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
     {"Stierenkaart": "Stiercode DE (HB-nr)", "Titel in bestand": "Stiercode DE (HB-nr)", "Formule": None},
     {"Stierenkaart": "Stiercode BE Wallonië", "Titel in bestand": "Stiercode BE Wallonië", "Formule": None},
@@ -98,7 +103,7 @@ def load_prijslijst(file):
             st.error("De prijslijst heeft minder dan 5 kolommen; kolom E ontbreekt.")
             return None, None
 
-        # kolom A = ki-code (eerste kolom), kolom E = prijs (vijfde kolom)
+        # kolom A = ki-code (1e kolom), kolom E = prijs (5e kolom)
         ki_series = df.iloc[:, 0]
         prijs_series = df.iloc[:, 4]
 
@@ -108,7 +113,7 @@ def load_prijslijst(file):
         })
         df_prices["prijs"] = pd.to_numeric(df_prices["prijs"], errors="coerce")
 
-        # -S betekent gesekst; verwijder -S voor join-sleutel
+        # -S => gesekst; verwijder -S voor join-sleutel
         df_prices["is_gesekst"] = df_prices["ki-code"].str.endswith("-S")
         df_normaal = df_prices[~df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
         df_gesekst = df_prices[df_prices["is_gesekst"]][["ki-code", "prijs"]].copy()
@@ -214,7 +219,7 @@ def main():
             # -------------------------------------------------------
             output = io.BytesIO()
 
-            # maak lege TIP-kolom als die ontbreekt
+            # lege TIP-kolom indien nodig
             if "TIP" not in df_selected.columns:
                 df_selected["TIP"] = ""
 
@@ -232,11 +237,14 @@ def main():
                 "uierdiepte", "achteruierhoogte", "ophangband",
                 "achterspeenplaatsing",
                 "geboortegemak", "melksnelheid", "celgetal", "vruchtbaarheid",
-                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur", "koe familie","Stiercode NL / KI code", "Stiercode DE (HB-nr)",
-                "Stiercode BE Wallonië", "Stiercode CA", "Stiercode DK"
+                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur",
+                "koe familie",
+                # de extra stiercodes na 'koe familie'
+                "Stiercode NL / KI code", "Stiercode DE (HB-nr)",
+                "Stiercode BE Wallonië", "Stiercode CA", "Stiercode DK",
             ]
 
-            # Alleen kolommen meenemen die er zijn
+            # Alleen kolommen meenemen die aanwezig zijn
             bestaande_kolommen = [c for c in kolomvolgorde if c in df_selected.columns]
 
             # Prijzen afronden
