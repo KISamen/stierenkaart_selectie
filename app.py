@@ -63,7 +63,11 @@ mapping_table_pim = [
     {"Stierenkaart": "klauwgezondheid", "Titel in bestand": "OFFICIAL CLAW HEALTH EVALUATION IN THIS COUNTRY klauwgezondheid", "Formule": "/100"},
     {"Stierenkaart": "levensduur", "Titel in bestand": "OFFICIAL CALF LIVABILITY EVALUATION IN THIS COUNTRY levensduur", "Formule": None},
     {"Stierenkaart": "koe familie", "Titel in bestand": "Koe familie", "Formule": None}
-
+    {"Stierenkaart": "Stiercode NL / KI code", "Titel in bestand": "Stiercode NL / KI code", "Formule": None},
+    {"Stierenkaart": "Stiercode DE (HB-nr)", "Titel in bestand": "Stiercode DE (HB-nr)", "Formule": None},
+    {"Stierenkaart": "Stiercode BE Wallonië", "Titel in bestand": "Stiercode BE Wallonië", "Formule": None},
+    {"Stierenkaart": "Stiercode CA", "Titel in bestand": "Stiercode CA", "Formule": None},
+    {"Stierenkaart": "Stiercode DK", "Titel in bestand": "Stiercode DK", "Formule": None},
 ]
 
 # -------------------------------------------------------
@@ -228,7 +232,8 @@ def main():
                 "uierdiepte", "achteruierhoogte", "ophangband",
                 "achterspeenplaatsing",
                 "geboortegemak", "melksnelheid", "celgetal", "vruchtbaarheid",
-                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur", "koe familie"
+                "karakter", "laatrijpheid", "persistentie", "klauwgezondheid", "levensduur", "koe familie","Stiercode NL / KI code", "Stiercode DE (HB-nr)",
+                "Stiercode BE Wallonië", "Stiercode CA", "Stiercode DK"
             ]
 
             # Alleen kolommen meenemen die er zijn
